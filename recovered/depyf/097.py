@@ -1,0 +1,15 @@
+def _add_region_marker(self, point):
+    source = vtk.vtkSphereSource()
+    source.SetCenter(*map(float, point))
+    source.SetRadius(max(0.025, (self.z_max - self.z_min) * 0.002))
+    source.SetThetaResolution(10)
+    source.SetPhiResolution(8)
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(source.GetOutputPort())
+    actor = vtk.vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(0.91, 0.23, 0.48)
+    self.renderer.AddActor(actor)
+    self.region_marker_actors.append(actor)
+    self.vtk_widget.GetRenderWindow().Render()
+    return None

@@ -1,0 +1,1153 @@
+105           0 BUILD_MAP                0
+              2 STORE_FAST               1 (header)
+
+106           4 LOAD_GLOBAL              0 (open)
+              6 LOAD_FAST                0 (path)
+              8 LOAD_CONST               1 ('rb')
+             10 CALL_FUNCTION            2
+             12 SETUP_WITH              66 (to 146)
+             14 STORE_FAST               2 (stream)
+
+107     >>   16 NOP
+
+108     >>   18 LOAD_FAST                2 (stream)
+             20 LOAD_METHOD              1 (readline)
+             22 CALL_METHOD              0
+             24 STORE_FAST               3 (line)
+
+109          26 LOAD_FAST                3 (line)
+             28 POP_JUMP_IF_TRUE        19 (to 38)
+
+110          30 LOAD_GLOBAL              2 (ValueError)
+             32 LOAD_CONST               3 ('PCD 文件头不完整。')
+             34 CALL_FUNCTION            1
+             36 RAISE_VARARGS            1
+
+111     >>   38 LOAD_FAST                3 (line)
+             40 LOAD_ATTR                3 (decode)
+             42 LOAD_CONST               4 ('ascii')
+             44 LOAD_CONST               5 ('strict')
+             46 LOAD_CONST               6 (('errors',))
+             48 CALL_FUNCTION_KW         2
+             50 LOAD_METHOD              4 (strip)
+             52 CALL_METHOD              0
+             54 LOAD_METHOD              5 (split)
+             56 CALL_METHOD              0
+             58 STORE_FAST               4 (parts)
+
+112          60 LOAD_FAST                4 (parts)
+             62 POP_JUMP_IF_FALSE       39 (to 78)
+             64 LOAD_FAST                4 (parts)
+             66 LOAD_CONST               7 (0)
+             68 BINARY_SUBSCR
+             70 LOAD_METHOD              6 (startswith)
+             72 LOAD_CONST               8 ('#')
+             74 CALL_METHOD              1
+             76 POP_JUMP_IF_FALSE       40 (to 80)
+
+113     >>   78 JUMP_ABSOLUTE            8 (to 16)
+
+114     >>   80 LOAD_FAST                4 (parts)
+             82 LOAD_CONST               9 (1)
+             84 LOAD_CONST               0 (None)
+             86 BUILD_SLICE              2
+             88 BINARY_SUBSCR
+             90 LOAD_FAST                1 (header)
+             92 LOAD_FAST                4 (parts)
+             94 LOAD_CONST               7 (0)
+             96 BINARY_SUBSCR
+             98 LOAD_METHOD              7 (upper)
+            100 CALL_METHOD              0
+            102 STORE_SUBSCR
+
+115         104 LOAD_FAST                4 (parts)
+            106 LOAD_CONST               7 (0)
+            108 BINARY_SUBSCR
+            110 LOAD_METHOD              7 (upper)
+            112 CALL_METHOD              0
+            114 LOAD_CONST              10 ('DATA')
+            116 COMPARE_OP               2 (==)
+            118 POP_JUMP_IF_FALSE       65 (to 130)
+
+116         120 LOAD_FAST                2 (stream)
+            122 LOAD_METHOD              8 (tell)
+            124 CALL_METHOD              0
+            126 STORE_FAST               5 (data_offset)
+
+117         128 JUMP_FORWARD             1 (to 132)
+
+107     >>  130 JUMP_ABSOLUTE            9 (to 18)
+
+117     >>  132 POP_BLOCK
+
+106         134 LOAD_CONST               0 (None)
+            136 DUP_TOP
+            138 DUP_TOP
+            140 CALL_FUNCTION            3
+            142 POP_TOP
+            144 JUMP_FORWARD             8 (to 162)
+        >>  146 WITH_EXCEPT_START
+            148 POP_JUMP_IF_TRUE        76 (to 152)
+            150 RERAISE                  1
+        >>  152 POP_TOP
+            154 POP_TOP
+            156 POP_TOP
+            158 POP_EXCEPT
+            160 POP_TOP
+
+119     >>  162 LOAD_FAST                1 (header)
+            164 LOAD_METHOD              9 (get)
+            166 LOAD_CONST              11 ('FIELDS')
+            168 BUILD_LIST               0
+            170 CALL_METHOD              2
+            172 STORE_DEREF              0 (fields)
+
+120         174 LOAD_GLOBAL             10 (int)
+            176 LOAD_FAST                1 (header)
+            178 LOAD_METHOD              9 (get)
+            180 LOAD_CONST              12 ('POINTS')
+            182 LOAD_CONST               7 (0)
+            184 BUILD_LIST               1
+            186 CALL_METHOD              2
+            188 LOAD_CONST               7 (0)
+            190 BINARY_SUBSCR
+            192 CALL_FUNCTION            1
+            194 STORE_FAST               6 (point_count)
+
+121         196 LOAD_FAST                6 (point_count)
+            198 POP_JUMP_IF_TRUE       122 (to 244)
+
+122         200 LOAD_GLOBAL             10 (int)
+            202 LOAD_FAST                1 (header)
+            204 LOAD_METHOD              9 (get)
+            206 LOAD_CONST              13 ('WIDTH')
+            208 LOAD_CONST              14 ('0')
+            210 BUILD_LIST               1
+            212 CALL_METHOD              2
+            214 LOAD_CONST               7 (0)
+            216 BINARY_SUBSCR
+            218 CALL_FUNCTION            1
+            220 LOAD_GLOBAL             10 (int)
+            222 LOAD_FAST                1 (header)
+            224 LOAD_METHOD              9 (get)
+            226 LOAD_CONST              15 ('HEIGHT')
+            228 LOAD_CONST              16 ('1')
+            230 BUILD_LIST               1
+            232 CALL_METHOD              2
+            234 LOAD_CONST               7 (0)
+            236 BINARY_SUBSCR
+            238 CALL_FUNCTION            1
+            240 BINARY_MULTIPLY
+            242 STORE_FAST               6 (point_count)
+
+123     >>  244 LOAD_FAST                1 (header)
+            246 LOAD_METHOD              9 (get)
+            248 LOAD_CONST              10 ('DATA')
+            250 CALL_METHOD              1
+            252 LOAD_CONST              17 ('binary')
+            254 BUILD_LIST               1
+            256 COMPARE_OP               2 (==)
+            258 EXTENDED_ARG             1
+            260 POP_JUMP_IF_FALSE      307 (to 614)
+            262 LOAD_GLOBAL             11 (all)
+            264 LOAD_CLOSURE             0 (fields)
+            266 BUILD_TUPLE              1
+            268 LOAD_CONST              18 (<code object <genexpr> at 0x7f0cb1d2bb50, file "/opt/taffy-editor/main.py", line 123>)
+            270 LOAD_CONST              19 ('load_pcd_data.<locals>.<genexpr>')
+            272 MAKE_FUNCTION            8 (closure)
+            274 LOAD_CONST              20 (('x', 'y', 'z'))
+            276 GET_ITER
+            278 CALL_FUNCTION            1
+            280 CALL_FUNCTION            1
+            282 EXTENDED_ARG             1
+            284 POP_JUMP_IF_FALSE      307 (to 614)
+
+124         286 LOAD_CONST              21 (<code object <listcomp> at 0x7f0cb1d2bd60, file "/opt/taffy-editor/main.py", line 124>)
+            288 LOAD_CONST              22 ('load_pcd_data.<locals>.<listcomp>')
+            290 MAKE_FUNCTION            0
+            292 LOAD_FAST                1 (header)
+            294 LOAD_METHOD              9 (get)
+            296 LOAD_CONST              23 ('SIZE')
+            298 BUILD_LIST               0
+            300 CALL_METHOD              2
+            302 GET_ITER
+            304 CALL_FUNCTION            1
+            306 STORE_FAST               7 (sizes)
+
+125         308 LOAD_FAST                1 (header)
+            310 LOAD_METHOD              9 (get)
+            312 LOAD_CONST              24 ('TYPE')
+            314 BUILD_LIST               0
+            316 CALL_METHOD              2
+            318 STORE_FAST               8 (types)
+
+126         320 LOAD_CONST              25 (<code object <listcomp> at 0x7f0cb1d2be10, file "/opt/taffy-editor/main.py", line 126>)
+            322 LOAD_CONST              22 ('load_pcd_data.<locals>.<listcomp>')
+            324 MAKE_FUNCTION            0
+            326 LOAD_FAST                1 (header)
+            328 LOAD_METHOD              9 (get)
+            330 LOAD_CONST              26 ('COUNT')
+            332 LOAD_CONST              16 ('1')
+            334 BUILD_LIST               1
+            336 LOAD_GLOBAL             12 (len)
+            338 LOAD_DEREF               0 (fields)
+            340 CALL_FUNCTION            1
+            342 BINARY_MULTIPLY
+            344 CALL_METHOD              2
+            346 GET_ITER
+            348 CALL_FUNCTION            1
+            350 STORE_FAST               9 (counts)
+
+127         352 LOAD_CONST              27 ('<f4')
+            354 LOAD_CONST              28 ('<f8')
+            356 LOAD_CONST              29 ('i1')
+            358 LOAD_CONST              30 ('<i2')
+            360 LOAD_CONST              31 ('<i4')
+            362 LOAD_CONST              32 ('<i8')
+            364 LOAD_CONST              33 ('u1')
+            366 LOAD_CONST              34 ('<u2')
+            368 LOAD_CONST              35 ('<u4')
+            370 LOAD_CONST              36 ('<u8')
+            372 LOAD_CONST              37 ((('F', 4), ('F', 8), ('I', 1), ('I', 2), ('I', 4), ('I', 8), ('U', 1), ('U', 2), ('U', 4), ('U', 8)))
+            374 BUILD_CONST_KEY_MAP     10
+            376 STORE_FAST              10 (type_map)
+
+128         378 BUILD_LIST               0
+            380 STORE_FAST              11 (dtype_fields)
+
+129         382 LOAD_GLOBAL             13 (zip)
+            384 LOAD_DEREF               0 (fields)
+            386 LOAD_FAST                7 (sizes)
+            388 LOAD_FAST                8 (types)
+            390 LOAD_FAST                9 (counts)
+            392 CALL_FUNCTION            4
+            394 GET_ITER
+        >>  396 FOR_ITER                36 (to 470)
+            398 UNPACK_SEQUENCE          4
+            400 STORE_FAST              12 (name)
+            402 STORE_FAST              13 (size)
+            404 STORE_FAST              14 (kind)
+            406 STORE_FAST              15 (count)
+
+130         408 LOAD_FAST               10 (type_map)
+            410 LOAD_METHOD              9 (get)
+            412 LOAD_FAST               14 (kind)
+            414 LOAD_FAST               13 (size)
+            416 BUILD_TUPLE              2
+            418 CALL_METHOD              1
+            420 STORE_FAST              16 (dtype)
+
+131         422 LOAD_FAST               16 (dtype)
+            424 LOAD_CONST               0 (None)
+            426 IS_OP                    0
+            428 POP_JUMP_IF_FALSE      217 (to 434)
+
+132         430 POP_TOP
+            432 JUMP_FORWARD            90 (to 614)
+
+133     >>  434 LOAD_FAST               11 (dtype_fields)
+            436 LOAD_METHOD             14 (append)
+            438 LOAD_FAST               15 (count)
+            440 LOAD_CONST               9 (1)
+            442 COMPARE_OP               2 (==)
+            444 POP_JUMP_IF_FALSE      227 (to 454)
+            446 LOAD_FAST               12 (name)
+            448 LOAD_FAST               16 (dtype)
+            450 BUILD_TUPLE              2
+            452 JUMP_FORWARD             5 (to 464)
+        >>  454 LOAD_FAST               12 (name)
+            456 LOAD_FAST               16 (dtype)
+            458 LOAD_FAST               15 (count)
+            460 BUILD_TUPLE              1
+            462 BUILD_TUPLE              3
+        >>  464 CALL_METHOD              1
+            466 POP_TOP
+            468 JUMP_ABSOLUTE          198 (to 396)
+
+135     >>  470 LOAD_GLOBAL             15 (np)
+            472 LOAD_ATTR               16 (memmap)
+            474 LOAD_FAST                0 (path)
+            476 LOAD_CONST              38 ('r')
+            478 LOAD_GLOBAL             15 (np)
+            480 LOAD_METHOD             17 (dtype)
+            482 LOAD_FAST               11 (dtype_fields)
+            484 CALL_METHOD              1
+            486 LOAD_FAST                5 (data_offset)
+            488 LOAD_FAST                6 (point_count)
+            490 BUILD_TUPLE              1
+            492 LOAD_CONST              39 (('mode', 'dtype', 'offset', 'shape'))
+            494 CALL_FUNCTION_KW         5
+            496 STORE_FAST              17 (records)
+
+136         498 LOAD_GLOBAL             18 (max)
+            500 LOAD_CONST               9 (1)
+            502 LOAD_GLOBAL             10 (int)
+            504 LOAD_GLOBAL             15 (np)
+            506 LOAD_METHOD             19 (ceil)
+            508 LOAD_FAST                6 (point_count)
+            510 LOAD_GLOBAL             20 (MAX_RENDER_POINTS)
+            512 BINARY_TRUE_DIVIDE
+            514 CALL_METHOD              1
+            516 CALL_FUNCTION            1
+            518 CALL_FUNCTION            2
+            520 STORE_FAST              18 (stride)
+
+137         522 LOAD_GLOBAL             15 (np)
+            524 LOAD_METHOD             21 (column_stack)
+            526 LOAD_FAST               17 (records)
+            528 LOAD_CONST              40 ('x')
+            530 BINARY_SUBSCR
+            532 LOAD_CONST               0 (None)
+            534 LOAD_CONST               0 (None)
+            536 LOAD_FAST               18 (stride)
+            538 BUILD_SLICE              3
+            540 BINARY_SUBSCR
+            542 LOAD_FAST               17 (records)
+            544 LOAD_CONST              41 ('y')
+            546 BINARY_SUBSCR
+            548 LOAD_CONST               0 (None)
+            550 LOAD_CONST               0 (None)
+            552 LOAD_FAST               18 (stride)
+            554 BUILD_SLICE              3
+            556 BINARY_SUBSCR
+            558 LOAD_FAST               17 (records)
+            560 LOAD_CONST              42 ('z')
+            562 BINARY_SUBSCR
+            564 LOAD_CONST               0 (None)
+            566 LOAD_CONST               0 (None)
+            568 LOAD_FAST               18 (stride)
+            570 BUILD_SLICE              3
+            572 BINARY_SUBSCR
+            574 BUILD_TUPLE              3
+            576 CALL_METHOD              1
+            578 LOAD_ATTR               22 (astype)
+            580 LOAD_GLOBAL             15 (np)
+            582 LOAD_ATTR               23 (float32)
+            584 LOAD_CONST              43 (False)
+            586 LOAD_CONST              44 (('copy',))
+            588 CALL_FUNCTION_KW         2
+            590 STORE_FAST              19 (display_points)
+
+138         592 LOAD_FAST               19 (display_points)
+            594 LOAD_FAST               19 (display_points)
+            596 LOAD_CONST               0 (None)
+            598 LOAD_CONST               0 (None)
+            600 BUILD_SLICE              2
+            602 LOAD_CONST              45 (2)
+            604 BUILD_TUPLE              2
+            606 BINARY_SUBSCR
+            608 LOAD_FAST                6 (point_count)
+            610 BUILD_TUPLE              3
+            612 RETURN_VALUE
+
+140     >>  614 LOAD_GLOBAL             24 (o3d)
+            616 LOAD_ATTR               25 (io)
+            618 LOAD_ATTR               26 (read_point_cloud)
+            620 LOAD_GLOBAL             27 (str)
+            622 LOAD_FAST                0 (path)
+            624 CALL_FUNCTION            1
+            626 LOAD_CONST               2 (True)
+            628 LOAD_CONST               2 (True)
+            630 LOAD_CONST              46 (('remove_nan_points', 'remove_infinite_points'))
+            632 CALL_FUNCTION_KW         3
+            634 STORE_FAST              20 (cloud)
+
+141         636 LOAD_GLOBAL             15 (np)
+            638 LOAD_METHOD             28 (asarray)
+            640 LOAD_FAST               20 (cloud)
+            642 LOAD_ATTR               29 (points)
+            644 CALL_METHOD              1
+            646 STORE_FAST              21 (all_points)
+
+142         648 LOAD_GLOBAL             12 (len)
+            650 LOAD_FAST               21 (all_points)
+            652 CALL_FUNCTION            1
+            654 EXTENDED_ARG             1
+            656 POP_JUMP_IF_TRUE       333 (to 666)
+
+143         658 LOAD_GLOBAL              2 (ValueError)
+            660 LOAD_CONST              47 ('文件中没有有效 XYZ 点。')
+            662 CALL_FUNCTION            1
+            664 RAISE_VARARGS            1
+
+144     >>  666 LOAD_GLOBAL             12 (len)
+            668 LOAD_FAST               21 (all_points)
+            670 CALL_FUNCTION            1
+            672 STORE_FAST              22 (total_points)
+
+145         674 LOAD_GLOBAL             18 (max)
+            676 LOAD_CONST               9 (1)
+            678 LOAD_GLOBAL             10 (int)
+            680 LOAD_GLOBAL             15 (np)
+            682 LOAD_METHOD             19 (ceil)
+            684 LOAD_FAST               22 (total_points)
+            686 LOAD_GLOBAL             20 (MAX_RENDER_POINTS)
+            688 BINARY_TRUE_DIVIDE
+            690 CALL_METHOD              1
+            692 CALL_FUNCTION            1
+            694 CALL_FUNCTION            2
+            696 STORE_FAST              18 (stride)
+
+146         698 LOAD_GLOBAL             15 (np)
+            700 LOAD_ATTR               30 (ascontiguousarray)
+            702 LOAD_FAST               21 (all_points)
+            704 LOAD_CONST               0 (None)
+            706 LOAD_CONST               0 (None)
+            708 LOAD_FAST               18 (stride)
+            710 BUILD_SLICE              3
+            712 LOAD_CONST               0 (None)
+            714 LOAD_CONST              48 (3)
+            716 BUILD_SLICE              2
+            718 BUILD_TUPLE              2
+            720 BINARY_SUBSCR
+            722 LOAD_GLOBAL             15 (np)
+            724 LOAD_ATTR               23 (float32)
+            726 LOAD_CONST              49 (('dtype',))
+            728 CALL_FUNCTION_KW         2
+            730 STORE_FAST              19 (display_points)
+
+147         732 LOAD_FAST               19 (display_points)
+            734 LOAD_FAST               19 (display_points)
+            736 LOAD_CONST               0 (None)
+            738 LOAD_CONST               0 (None)
+            740 BUILD_SLICE              2
+            742 LOAD_CONST              45 (2)
+            744 BUILD_TUPLE              2
+            746 BINARY_SUBSCR
+            748 LOAD_FAST               22 (total_points)
+            750 BUILD_TUPLE              3
+            752 RETURN_VALUE
+
+Disassembly of <code object <genexpr> at 0x7f0cb1d2bb50, file "/opt/taffy-editor/main.py", line 123>:
+              0 GEN_START                0
+
+123           2 LOAD_FAST                0 (.0)
+        >>    4 FOR_ITER                 7 (to 20)
+              6 STORE_FAST               1 (key)
+              8 LOAD_FAST                1 (key)
+             10 LOAD_DEREF               0 (fields)
+             12 CONTAINS_OP              0
+             14 YIELD_VALUE
+             16 POP_TOP
+             18 JUMP_ABSOLUTE            2 (to 4)
+        >>   20 LOAD_CONST               0 (None)
+             22 RETURN_VALUE
+
+Disassembly of <code object <listcomp> at 0x7f0cb1d2bd60, file "/opt/taffy-editor/main.py", line 124>:
+124           0 BUILD_LIST               0
+              2 LOAD_FAST                0 (.0)
+        >>    4 FOR_ITER                 6 (to 18)
+              6 STORE_FAST               1 (v)
+              8 LOAD_GLOBAL              0 (int)
+             10 LOAD_FAST                1 (v)
+             12 CALL_FUNCTION            1
+             14 LIST_APPEND              2
+             16 JUMP_ABSOLUTE            2 (to 4)
+        >>   18 RETURN_VALUE
+
+Disassembly of <code object <listcomp> at 0x7f0cb1d2be10, file "/opt/taffy-editor/main.py", line 126>:
+126           0 BUILD_LIST               0
+              2 LOAD_FAST                0 (.0)
+        >>    4 FOR_ITER                 6 (to 18)
+              6 STORE_FAST               1 (v)
+              8 LOAD_GLOBAL              0 (int)
+             10 LOAD_FAST                1 (v)
+             12 CALL_FUNCTION            1
+             14 LIST_APPEND              2
+             16 JUMP_ABSOLUTE            2 (to 4)
+        >>   18 RETURN_VALUE
+152           0 BUILD_MAP                0
+              2 STORE_FAST               1 (header)
+
+153           4 LOAD_GLOBAL              0 (open)
+              6 LOAD_FAST                0 (path)
+              8 LOAD_CONST               1 ('rb')
+             10 CALL_FUNCTION            2
+             12 SETUP_WITH              66 (to 146)
+             14 STORE_FAST               2 (stream)
+
+154     >>   16 NOP
+
+155     >>   18 LOAD_FAST                2 (stream)
+             20 LOAD_METHOD              1 (readline)
+             22 CALL_METHOD              0
+             24 STORE_FAST               3 (line)
+
+156          26 LOAD_FAST                3 (line)
+             28 POP_JUMP_IF_TRUE        19 (to 38)
+
+157          30 LOAD_GLOBAL              2 (ValueError)
+             32 LOAD_CONST               3 ('PCD 文件头不完整。')
+             34 CALL_FUNCTION            1
+             36 RAISE_VARARGS            1
+
+158     >>   38 LOAD_FAST                3 (line)
+             40 LOAD_ATTR                3 (decode)
+             42 LOAD_CONST               4 ('ascii')
+             44 LOAD_CONST               5 ('strict')
+             46 LOAD_CONST               6 (('errors',))
+             48 CALL_FUNCTION_KW         2
+             50 LOAD_METHOD              4 (strip)
+             52 CALL_METHOD              0
+             54 LOAD_METHOD              5 (split)
+             56 CALL_METHOD              0
+             58 STORE_FAST               4 (parts)
+
+159          60 LOAD_FAST                4 (parts)
+             62 POP_JUMP_IF_FALSE       39 (to 78)
+             64 LOAD_FAST                4 (parts)
+             66 LOAD_CONST               7 (0)
+             68 BINARY_SUBSCR
+             70 LOAD_METHOD              6 (startswith)
+             72 LOAD_CONST               8 ('#')
+             74 CALL_METHOD              1
+             76 POP_JUMP_IF_FALSE       40 (to 80)
+
+160     >>   78 JUMP_ABSOLUTE            8 (to 16)
+
+161     >>   80 LOAD_FAST                4 (parts)
+             82 LOAD_CONST               9 (1)
+             84 LOAD_CONST              10 (None)
+             86 BUILD_SLICE              2
+             88 BINARY_SUBSCR
+             90 LOAD_FAST                1 (header)
+             92 LOAD_FAST                4 (parts)
+             94 LOAD_CONST               7 (0)
+             96 BINARY_SUBSCR
+             98 LOAD_METHOD              7 (upper)
+            100 CALL_METHOD              0
+            102 STORE_SUBSCR
+
+162         104 LOAD_FAST                4 (parts)
+            106 LOAD_CONST               7 (0)
+            108 BINARY_SUBSCR
+            110 LOAD_METHOD              7 (upper)
+            112 CALL_METHOD              0
+            114 LOAD_CONST              11 ('DATA')
+            116 COMPARE_OP               2 (==)
+            118 POP_JUMP_IF_FALSE       65 (to 130)
+
+163         120 LOAD_FAST                2 (stream)
+            122 LOAD_METHOD              8 (tell)
+            124 CALL_METHOD              0
+            126 STORE_FAST               5 (offset)
+
+164         128 JUMP_FORWARD             1 (to 132)
+
+154     >>  130 JUMP_ABSOLUTE            9 (to 18)
+
+164     >>  132 POP_BLOCK
+
+153         134 LOAD_CONST              10 (None)
+            136 DUP_TOP
+            138 DUP_TOP
+            140 CALL_FUNCTION            3
+            142 POP_TOP
+            144 JUMP_FORWARD             8 (to 162)
+        >>  146 WITH_EXCEPT_START
+            148 POP_JUMP_IF_TRUE        76 (to 152)
+            150 RERAISE                  1
+        >>  152 POP_TOP
+            154 POP_TOP
+            156 POP_TOP
+            158 POP_EXCEPT
+            160 POP_TOP
+
+165     >>  162 LOAD_FAST                1 (header)
+            164 LOAD_METHOD              9 (get)
+            166 LOAD_CONST              12 ('FIELDS')
+            168 BUILD_LIST               0
+            170 CALL_METHOD              2
+            172 STORE_DEREF              1 (fields)
+
+166         174 LOAD_GLOBAL             10 (all)
+            176 LOAD_CLOSURE             1 (fields)
+            178 BUILD_TUPLE              1
+            180 LOAD_CONST              13 (<code object <genexpr> at 0x7f0cb1b34030, file "/opt/taffy-editor/main.py", line 166>)
+            182 LOAD_CONST              14 ('load_full_xyz.<locals>.<genexpr>')
+            184 MAKE_FUNCTION            8 (closure)
+            186 LOAD_CONST              15 (('x', 'y', 'z'))
+            188 GET_ITER
+            190 CALL_FUNCTION            1
+            192 CALL_FUNCTION            1
+            194 POP_JUMP_IF_TRUE       102 (to 204)
+
+167         196 LOAD_GLOBAL              2 (ValueError)
+            198 LOAD_CONST              16 ('PCD 中缺少 XYZ 字段。')
+            200 CALL_FUNCTION            1
+            202 RAISE_VARARGS            1
+
+168     >>  204 LOAD_GLOBAL             11 (int)
+            206 LOAD_FAST                1 (header)
+            208 LOAD_METHOD              9 (get)
+            210 LOAD_CONST              17 ('POINTS')
+            212 LOAD_CONST               7 (0)
+            214 BUILD_LIST               1
+            216 CALL_METHOD              2
+            218 LOAD_CONST               7 (0)
+            220 BINARY_SUBSCR
+            222 CALL_FUNCTION            1
+            224 STORE_FAST               6 (count)
+
+169         226 LOAD_FAST                1 (header)
+            228 LOAD_METHOD              9 (get)
+            230 LOAD_CONST              11 ('DATA')
+            232 CALL_METHOD              1
+            234 LOAD_CONST              18 ('binary')
+            236 BUILD_LIST               1
+            238 COMPARE_OP               2 (==)
+            240 EXTENDED_ARG             1
+            242 POP_JUMP_IF_FALSE      298 (to 596)
+
+170         244 LOAD_CONST              19 (<code object <listcomp> at 0x7f0cb1b340e0, file "/opt/taffy-editor/main.py", line 170>)
+            246 LOAD_CONST              20 ('load_full_xyz.<locals>.<listcomp>')
+            248 MAKE_FUNCTION            0
+            250 LOAD_FAST                1 (header)
+            252 LOAD_METHOD              9 (get)
+            254 LOAD_CONST              21 ('SIZE')
+            256 BUILD_LIST               0
+            258 CALL_METHOD              2
+            260 GET_ITER
+            262 CALL_FUNCTION            1
+            264 STORE_DEREF              2 (sizes)
+
+171         266 LOAD_FAST                1 (header)
+            268 LOAD_METHOD              9 (get)
+            270 LOAD_CONST              22 ('TYPE')
+            272 BUILD_LIST               0
+            274 CALL_METHOD              2
+            276 STORE_DEREF              3 (types)
+
+172         278 LOAD_CONST              23 (<code object <listcomp> at 0x7f0cb1b34190, file "/opt/taffy-editor/main.py", line 172>)
+            280 LOAD_CONST              20 ('load_full_xyz.<locals>.<listcomp>')
+            282 MAKE_FUNCTION            0
+            284 LOAD_FAST                1 (header)
+            286 LOAD_METHOD              9 (get)
+            288 LOAD_CONST              24 ('COUNT')
+            290 LOAD_CONST              25 ('1')
+            292 BUILD_LIST               1
+            294 LOAD_GLOBAL             12 (len)
+            296 LOAD_DEREF               1 (fields)
+            298 CALL_FUNCTION            1
+            300 BINARY_MULTIPLY
+            302 CALL_METHOD              2
+            304 GET_ITER
+            306 CALL_FUNCTION            1
+            308 STORE_DEREF              0 (counts)
+
+173         310 LOAD_CONST              26 ('<f4')
+            312 LOAD_CONST              27 ('<f8')
+            314 LOAD_CONST              28 ('i1')
+            316 LOAD_CONST              29 ('<i2')
+            318 LOAD_CONST              30 ('<i4')
+            320 LOAD_CONST              31 ('<i8')
+            322 LOAD_CONST              32 ('u1')
+            324 LOAD_CONST              33 ('<u2')
+            326 LOAD_CONST              34 ('<u4')
+            328 LOAD_CONST              35 ('<u8')
+            330 LOAD_CONST              36 ((('F', 4), ('F', 8), ('I', 1), ('I', 2), ('I', 4), ('I', 8), ('U', 1), ('U', 2), ('U', 4), ('U', 8)))
+            332 BUILD_CONST_KEY_MAP     10
+            334 STORE_FAST               7 (type_map)
+
+174         336 BUILD_LIST               0
+            338 STORE_FAST               8 (dtype_fields)
+
+175         340 LOAD_GLOBAL             13 (zip)
+            342 LOAD_DEREF               1 (fields)
+            344 LOAD_DEREF               2 (sizes)
+            346 LOAD_DEREF               3 (types)
+            348 LOAD_DEREF               0 (counts)
+            350 CALL_FUNCTION            4
+            352 GET_ITER
+        >>  354 FOR_ITER                41 (to 438)
+            356 UNPACK_SEQUENCE          4
+            358 STORE_FAST               9 (name)
+            360 STORE_FAST              10 (size)
+            362 STORE_FAST              11 (kind)
+            364 STORE_FAST              12 (item_count)
+
+176         366 LOAD_FAST                7 (type_map)
+            368 LOAD_METHOD              9 (get)
+            370 LOAD_FAST               11 (kind)
+            372 LOAD_FAST               10 (size)
+            374 BUILD_TUPLE              2
+            376 CALL_METHOD              1
+            378 STORE_FAST              13 (dtype)
+
+177         380 LOAD_FAST               13 (dtype)
+            382 LOAD_CONST              10 (None)
+            384 IS_OP                    0
+            386 POP_JUMP_IF_FALSE      201 (to 402)
+
+178         388 LOAD_GLOBAL              2 (ValueError)
+            390 LOAD_CONST              37 ('不支持 PCD 字段类型：')
+            392 LOAD_FAST                9 (name)
+            394 FORMAT_VALUE             0
+            396 BUILD_STRING             2
+            398 CALL_FUNCTION            1
+            400 RAISE_VARARGS            1
+
+179     >>  402 LOAD_FAST                8 (dtype_fields)
+            404 LOAD_METHOD             14 (append)
+            406 LOAD_FAST               12 (item_count)
+            408 LOAD_CONST               9 (1)
+            410 COMPARE_OP               2 (==)
+            412 POP_JUMP_IF_FALSE      211 (to 422)
+            414 LOAD_FAST                9 (name)
+            416 LOAD_FAST               13 (dtype)
+            418 BUILD_TUPLE              2
+            420 JUMP_FORWARD             5 (to 432)
+        >>  422 LOAD_FAST                9 (name)
+            424 LOAD_FAST               13 (dtype)
+            426 LOAD_FAST               12 (item_count)
+            428 BUILD_TUPLE              1
+            430 BUILD_TUPLE              3
+        >>  432 CALL_METHOD              1
+            434 POP_TOP
+            436 JUMP_ABSOLUTE          177 (to 354)
+
+180     >>  438 LOAD_GLOBAL             15 (np)
+            440 LOAD_ATTR               16 (memmap)
+            442 LOAD_FAST                0 (path)
+            444 LOAD_CONST              38 ('r')
+            446 LOAD_GLOBAL             15 (np)
+            448 LOAD_METHOD             17 (dtype)
+            450 LOAD_FAST                8 (dtype_fields)
+            452 CALL_METHOD              1
+            454 LOAD_FAST                5 (offset)
+            456 LOAD_FAST                6 (count)
+            458 BUILD_TUPLE              1
+            460 LOAD_CONST              39 (('mode', 'dtype', 'offset', 'shape'))
+            462 CALL_FUNCTION_KW         5
+            464 STORE_FAST              14 (records)
+
+181         466 LOAD_CLOSURE             1 (fields)
+            468 BUILD_TUPLE              1
+            470 LOAD_CONST              40 (<code object <listcomp> at 0x7f0cb1b34240, file "/opt/taffy-editor/main.py", line 181>)
+            472 LOAD_CONST              20 ('load_full_xyz.<locals>.<listcomp>')
+            474 MAKE_FUNCTION            8 (closure)
+            476 LOAD_CONST              41 ('xyz')
+            478 GET_ITER
+            480 CALL_FUNCTION            1
+            482 STORE_FAST              15 (xyz_indices)
+
+182         484 LOAD_FAST               15 (xyz_indices)
+            486 BUILD_LIST               0
+            488 LOAD_CONST              42 ((0, 1, 2))
+            490 LIST_EXTEND              1
+            492 COMPARE_OP               2 (==)
+            494 EXTENDED_ARG             1
+            496 POP_JUMP_IF_FALSE      278 (to 556)
+            498 LOAD_GLOBAL             10 (all)
+            500 LOAD_CLOSURE             0 (counts)
+            502 LOAD_CLOSURE             2 (sizes)
+            504 LOAD_CLOSURE             3 (types)
+            506 BUILD_TUPLE              3
+            508 LOAD_CONST              43 (<code object <genexpr> at 0x7f0cb1b342f0, file "/opt/taffy-editor/main.py", line 182>)
+            510 LOAD_CONST              14 ('load_full_xyz.<locals>.<genexpr>')
+            512 MAKE_FUNCTION            8 (closure)
+            514 LOAD_FAST               15 (xyz_indices)
+            516 GET_ITER
+            518 CALL_FUNCTION            1
+            520 CALL_FUNCTION            1
+            522 EXTENDED_ARG             1
+            524 POP_JUMP_IF_FALSE      278 (to 556)
+
+185         526 LOAD_GLOBAL             15 (np)
+            528 LOAD_ATTR               18 (ndarray)
+            530 LOAD_FAST                6 (count)
+            532 LOAD_CONST              44 (3)
+            534 BUILD_TUPLE              2
+            536 LOAD_CONST              26 ('<f4')
+            538 LOAD_FAST               14 (records)
+
+186         540 LOAD_FAST               14 (records)
+            542 LOAD_ATTR               17 (dtype)
+            544 LOAD_ATTR               19 (itemsize)
+            546 LOAD_CONST              45 (4)
+            548 BUILD_TUPLE              2
+
+185         550 LOAD_CONST              46 (('dtype', 'buffer', 'strides'))
+            552 CALL_FUNCTION_KW         4
+            554 RETURN_VALUE
+
+187     >>  556 LOAD_GLOBAL             15 (np)
+            558 LOAD_METHOD             20 (column_stack)
+            560 LOAD_FAST               14 (records)
+            562 LOAD_CONST              47 ('x')
+            564 BINARY_SUBSCR
+            566 LOAD_FAST               14 (records)
+            568 LOAD_CONST              48 ('y')
+            570 BINARY_SUBSCR
+            572 LOAD_FAST               14 (records)
+            574 LOAD_CONST              49 ('z')
+            576 BINARY_SUBSCR
+            578 BUILD_TUPLE              3
+            580 CALL_METHOD              1
+            582 LOAD_ATTR               21 (astype)
+            584 LOAD_GLOBAL             15 (np)
+            586 LOAD_ATTR               22 (float32)
+            588 LOAD_CONST              50 (False)
+            590 LOAD_CONST              51 (('copy',))
+            592 CALL_FUNCTION_KW         2
+            594 RETURN_VALUE
+
+188     >>  596 LOAD_GLOBAL             23 (o3d)
+            598 LOAD_ATTR               24 (io)
+            600 LOAD_ATTR               25 (read_point_cloud)
+            602 LOAD_GLOBAL             26 (str)
+            604 LOAD_FAST                0 (path)
+            606 CALL_FUNCTION            1
+            608 LOAD_CONST               2 (True)
+            610 LOAD_CONST               2 (True)
+            612 LOAD_CONST              52 (('remove_nan_points', 'remove_infinite_points'))
+            614 CALL_FUNCTION_KW         3
+            616 STORE_FAST              16 (cloud)
+
+189         618 LOAD_GLOBAL             15 (np)
+            620 LOAD_ATTR               27 (asarray)
+            622 LOAD_FAST               16 (cloud)
+            624 LOAD_ATTR               28 (points)
+            626 LOAD_GLOBAL             15 (np)
+            628 LOAD_ATTR               22 (float32)
+            630 LOAD_CONST              53 (('dtype',))
+            632 CALL_FUNCTION_KW         2
+            634 RETURN_VALUE
+
+Disassembly of <code object <genexpr> at 0x7f0cb1b34030, file "/opt/taffy-editor/main.py", line 166>:
+              0 GEN_START                0
+
+166           2 LOAD_FAST                0 (.0)
+        >>    4 FOR_ITER                 7 (to 20)
+              6 STORE_FAST               1 (name)
+              8 LOAD_FAST                1 (name)
+             10 LOAD_DEREF               0 (fields)
+             12 CONTAINS_OP              0
+             14 YIELD_VALUE
+             16 POP_TOP
+             18 JUMP_ABSOLUTE            2 (to 4)
+        >>   20 LOAD_CONST               0 (None)
+             22 RETURN_VALUE
+
+Disassembly of <code object <listcomp> at 0x7f0cb1b340e0, file "/opt/taffy-editor/main.py", line 170>:
+170           0 BUILD_LIST               0
+              2 LOAD_FAST                0 (.0)
+        >>    4 FOR_ITER                 6 (to 18)
+              6 STORE_FAST               1 (value)
+              8 LOAD_GLOBAL              0 (int)
+             10 LOAD_FAST                1 (value)
+             12 CALL_FUNCTION            1
+             14 LIST_APPEND              2
+             16 JUMP_ABSOLUTE            2 (to 4)
+        >>   18 RETURN_VALUE
+
+Disassembly of <code object <listcomp> at 0x7f0cb1b34190, file "/opt/taffy-editor/main.py", line 172>:
+172           0 BUILD_LIST               0
+              2 LOAD_FAST                0 (.0)
+        >>    4 FOR_ITER                 6 (to 18)
+              6 STORE_FAST               1 (value)
+              8 LOAD_GLOBAL              0 (int)
+             10 LOAD_FAST                1 (value)
+             12 CALL_FUNCTION            1
+             14 LIST_APPEND              2
+             16 JUMP_ABSOLUTE            2 (to 4)
+        >>   18 RETURN_VALUE
+
+Disassembly of <code object <listcomp> at 0x7f0cb1b34240, file "/opt/taffy-editor/main.py", line 181>:
+181           0 BUILD_LIST               0
+              2 LOAD_FAST                0 (.0)
+        >>    4 FOR_ITER                 7 (to 20)
+              6 STORE_FAST               1 (axis)
+              8 LOAD_DEREF               0 (fields)
+             10 LOAD_METHOD              0 (index)
+             12 LOAD_FAST                1 (axis)
+             14 CALL_METHOD              1
+             16 LIST_APPEND              2
+             18 JUMP_ABSOLUTE            2 (to 4)
+        >>   20 RETURN_VALUE
+
+Disassembly of <code object <genexpr> at 0x7f0cb1b342f0, file "/opt/taffy-editor/main.py", line 182>:
+              0 GEN_START                0
+
+182           2 LOAD_FAST                0 (.0)
+        >>    4 FOR_ITER                21 (to 48)
+              6 STORE_FAST               1 (i)
+              8 LOAD_DEREF               1 (sizes)
+             10 LOAD_FAST                1 (i)
+             12 BINARY_SUBSCR
+             14 LOAD_CONST               0 (4)
+             16 COMPARE_OP               2 (==)
+             18 JUMP_IF_FALSE_OR_POP    21 (to 42)
+             20 LOAD_DEREF               2 (types)
+             22 LOAD_FAST                1 (i)
+             24 BINARY_SUBSCR
+             26 LOAD_CONST               1 ('F')
+             28 COMPARE_OP               2 (==)
+             30 JUMP_IF_FALSE_OR_POP    21 (to 42)
+             32 LOAD_DEREF               0 (counts)
+             34 LOAD_FAST                1 (i)
+             36 BINARY_SUBSCR
+             38 LOAD_CONST               2 (1)
+             40 COMPARE_OP               2 (==)
+        >>   42 YIELD_VALUE
+             44 POP_TOP
+             46 JUMP_ABSOLUTE            2 (to 4)
+        >>   48 LOAD_CONST               3 (None)
+             50 RETURN_VALUE
+446           0 LOAD_GLOBAL              0 (open)
+              2 LOAD_CONST               1 ('/proc/meminfo')
+              4 LOAD_CONST               2 ('ascii')
+              6 LOAD_CONST               3 (('encoding',))
+              8 CALL_FUNCTION_KW         2
+             10 SETUP_WITH              38 (to 88)
+             12 STORE_FAST               0 (stream)
+
+447          14 LOAD_FAST                0 (stream)
+             16 GET_ITER
+        >>   18 FOR_ITER                26 (to 72)
+             20 STORE_FAST               1 (line)
+
+448          22 LOAD_FAST                1 (line)
+             24 LOAD_METHOD              1 (startswith)
+             26 LOAD_CONST               4 ('MemAvailable:')
+             28 CALL_METHOD              1
+             30 POP_JUMP_IF_FALSE       35 (to 70)
+
+449          32 LOAD_GLOBAL              2 (int)
+             34 LOAD_FAST                1 (line)
+             36 LOAD_METHOD              3 (split)
+             38 CALL_METHOD              0
+             40 LOAD_CONST               5 (1)
+             42 BINARY_SUBSCR
+             44 CALL_FUNCTION            1
+             46 LOAD_CONST               6 (1024)
+             48 BINARY_MULTIPLY
+             50 ROT_TWO
+             52 POP_TOP
+
+446          54 POP_BLOCK
+             56 ROT_TWO
+             58 LOAD_CONST               0 (None)
+             60 DUP_TOP
+             62 DUP_TOP
+             64 CALL_FUNCTION            3
+             66 POP_TOP
+             68 RETURN_VALUE
+
+448     >>   70 JUMP_ABSOLUTE            9 (to 18)
+
+447     >>   72 POP_BLOCK
+
+446          74 LOAD_CONST               0 (None)
+             76 DUP_TOP
+             78 DUP_TOP
+             80 CALL_FUNCTION            3
+             82 POP_TOP
+
+450          84 LOAD_CONST               7 (0)
+             86 RETURN_VALUE
+
+446     >>   88 WITH_EXCEPT_START
+             90 POP_JUMP_IF_TRUE        47 (to 94)
+             92 RERAISE                  1
+        >>   94 POP_TOP
+             96 POP_TOP
+             98 POP_TOP
+            100 POP_EXCEPT
+            102 POP_TOP
+
+450         104 LOAD_CONST               7 (0)
+            106 RETURN_VALUE
+505           0 LOAD_GLOBAL              0 (Path)
+              2 LOAD_FAST                0 (path)
+              4 CALL_FUNCTION            1
+              6 STORE_FAST               3 (destination)
+
+506           8 LOAD_GLOBAL              1 (tempfile)
+             10 LOAD_ATTR                2 (mkstemp)
+             12 LOAD_CONST               1 ('.taffy-')
+             14 LOAD_GLOBAL              3 (str)
+             16 LOAD_FAST                3 (destination)
+             18 LOAD_ATTR                4 (parent)
+             20 CALL_FUNCTION            1
+             22 LOAD_CONST               2 (('prefix', 'dir'))
+             24 CALL_FUNCTION_KW         2
+             26 UNPACK_SEQUENCE          2
+             28 STORE_FAST               4 (fd)
+             30 STORE_FAST               5 (temporary)
+
+507          32 SETUP_FINALLY          138 (to 310)
+
+508          34 LOAD_GLOBAL              5 (os)
+             36 LOAD_METHOD              6 (fdopen)
+             38 LOAD_FAST                4 (fd)
+             40 LOAD_CONST               3 ('wb')
+             42 CALL_METHOD              2
+             44 SETUP_WITH             102 (to 250)
+             46 STORE_FAST               6 (stream)
+
+509          48 LOAD_FAST                2 (source_path)
+             50 LOAD_CONST               0 (None)
+             52 IS_OP                    1
+             54 POP_JUMP_IF_FALSE       57 (to 114)
+
+510          56 LOAD_GLOBAL              7 (open)
+             58 LOAD_FAST                2 (source_path)
+             60 LOAD_CONST               4 ('rb')
+             62 CALL_FUNCTION            2
+             64 SETUP_WITH              15 (to 96)
+             66 STORE_FAST               7 (source)
+
+511          68 LOAD_GLOBAL              8 (shutil)
+             70 LOAD_METHOD              9 (copyfileobj)
+             72 LOAD_FAST                7 (source)
+             74 LOAD_FAST                6 (stream)
+             76 LOAD_CONST               5 (8388608)
+             78 CALL_METHOD              3
+             80 POP_TOP
+             82 POP_BLOCK
+
+510          84 LOAD_CONST               0 (None)
+             86 DUP_TOP
+             88 DUP_TOP
+             90 CALL_FUNCTION            3
+             92 POP_TOP
+             94 JUMP_FORWARD             8 (to 112)
+        >>   96 WITH_EXCEPT_START
+             98 POP_JUMP_IF_TRUE        51 (to 102)
+            100 RERAISE                  1
+        >>  102 POP_TOP
+            104 POP_TOP
+            106 POP_TOP
+            108 POP_EXCEPT
+            110 POP_TOP
+        >>  112 JUMP_FORWARD            50 (to 214)
+
+513     >>  114 LOAD_GLOBAL             10 (len)
+            116 LOAD_FAST                1 (points)
+            118 CALL_FUNCTION            1
+            120 STORE_FAST               8 (count)
+
+514         122 LOAD_CONST               6 ('# .PCD v0.7\nVERSION 0.7\nFIELDS x y z\nSIZE 4 4 4\nTYPE F F F\nCOUNT 1 1 1\nWIDTH %d\nHEIGHT 1\nVIEWPOINT 0 0 0 1 0 0 0\nPOINTS %d\nDATA binary\n')
+
+516         124 LOAD_FAST                8 (count)
+            126 LOAD_FAST                8 (count)
+            128 BUILD_TUPLE              2
+
+514         130 BINARY_MODULO
+            132 STORE_FAST               9 (header)
+
+517         134 LOAD_FAST                6 (stream)
+            136 LOAD_METHOD             11 (write)
+            138 LOAD_FAST                9 (header)
+            140 LOAD_METHOD             12 (encode)
+            142 LOAD_CONST               7 ('ascii')
+            144 CALL_METHOD              1
+            146 CALL_METHOD              1
+            148 POP_TOP
+
+518         150 LOAD_GLOBAL             13 (range)
+            152 LOAD_CONST               8 (0)
+            154 LOAD_FAST                8 (count)
+            156 LOAD_CONST               9 (1000000)
+            158 CALL_FUNCTION            3
+            160 GET_ITER
+        >>  162 FOR_ITER                25 (to 214)
+            164 STORE_FAST              10 (start)
+
+519         166 LOAD_GLOBAL             14 (np)
+            168 LOAD_ATTR               15 (ascontiguousarray)
+            170 LOAD_FAST                1 (points)
+            172 LOAD_FAST               10 (start)
+            174 LOAD_FAST               10 (start)
+            176 LOAD_CONST               9 (1000000)
+            178 BINARY_ADD
+            180 BUILD_SLICE              2
+            182 BINARY_SUBSCR
+            184 LOAD_CONST              10 ('<f4')
+            186 LOAD_CONST              11 (('dtype',))
+            188 CALL_FUNCTION_KW         2
+            190 STORE_FAST              11 (chunk)
+
+520         192 LOAD_FAST                6 (stream)
+            194 LOAD_METHOD             11 (write)
+            196 LOAD_GLOBAL             16 (memoryview)
+            198 LOAD_FAST               11 (chunk)
+            200 CALL_FUNCTION            1
+            202 LOAD_METHOD             17 (cast)
+            204 LOAD_CONST              12 ('B')
+            206 CALL_METHOD              1
+            208 CALL_METHOD              1
+            210 POP_TOP
+            212 JUMP_ABSOLUTE           81 (to 162)
+
+521     >>  214 LOAD_FAST                6 (stream)
+            216 LOAD_METHOD             18 (flush)
+            218 CALL_METHOD              0
+            220 POP_TOP
+
+522         222 LOAD_GLOBAL              5 (os)
+            224 LOAD_METHOD             19 (fsync)
+            226 LOAD_FAST                6 (stream)
+            228 LOAD_METHOD             20 (fileno)
+            230 CALL_METHOD              0
+            232 CALL_METHOD              1
+            234 POP_TOP
+            236 POP_BLOCK
+
+508         238 LOAD_CONST               0 (None)
+            240 DUP_TOP
+            242 DUP_TOP
+            244 CALL_FUNCTION            3
+            246 POP_TOP
+            248 JUMP_FORWARD             8 (to 266)
+        >>  250 WITH_EXCEPT_START
+            252 POP_JUMP_IF_TRUE       128 (to 256)
+            254 RERAISE                  1
+        >>  256 POP_TOP
+            258 POP_TOP
+            260 POP_TOP
+            262 POP_EXCEPT
+            264 POP_TOP
+
+523     >>  266 LOAD_GLOBAL              5 (os)
+            268 LOAD_METHOD             21 (replace)
+            270 LOAD_FAST                5 (temporary)
+            272 LOAD_FAST                3 (destination)
+            274 CALL_METHOD              2
+            276 POP_TOP
+            278 POP_BLOCK
+
+525         280 LOAD_GLOBAL              5 (os)
+            282 LOAD_ATTR               22 (path)
+            284 LOAD_METHOD             23 (exists)
+            286 LOAD_FAST                5 (temporary)
+            288 CALL_METHOD              1
+            290 POP_JUMP_IF_FALSE      151 (to 302)
+
+526         292 LOAD_GLOBAL              5 (os)
+            294 LOAD_METHOD             24 (unlink)
+            296 LOAD_FAST                5 (temporary)
+            298 CALL_METHOD              1
+            300 POP_TOP
+
+527     >>  302 LOAD_GLOBAL              3 (str)
+            304 LOAD_FAST                3 (destination)
+            306 CALL_FUNCTION            1
+            308 RETURN_VALUE
+
+525     >>  310 LOAD_GLOBAL              5 (os)
+            312 LOAD_ATTR               22 (path)
+            314 LOAD_METHOD             23 (exists)
+            316 LOAD_FAST                5 (temporary)
+            318 CALL_METHOD              1
+            320 POP_JUMP_IF_FALSE      167 (to 334)
+
+526         322 LOAD_GLOBAL              5 (os)
+            324 LOAD_METHOD             24 (unlink)
+            326 LOAD_FAST                5 (temporary)
+            328 CALL_METHOD              1
+            330 POP_TOP
+            332 RERAISE                  0
+
+525     >>  334 RERAISE                  0

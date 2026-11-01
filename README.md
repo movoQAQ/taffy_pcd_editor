@@ -43,3 +43,21 @@ Ubuntu 24.04 Docker 镜像已成功构建，标签 `taffy-recovery:ubuntu24.04`�
 2026-11-01 验证结果：7 项 pytest 测试全部通过（3.87 秒）；覆盖数字格式化、百万点范围筛选分块边界、凸包/可视范围筛选、空/小/百万点二进制 PCD 读写往返和原文件复制。Xvfb 启动检查成功，5 秒内 51 次定时回调，正常退出。测试过程禁网。
 
 这些结果不证明恢复源码可运行，也不代表真实数据下的帧率或 UI 功能已验收。界面功能测试留给用户。
+
+## 第二轮源码恢复（2026-11-02）
+
+使用 Python 3.10 + depyf 0.20.0 重新处理全部 196 个代码对象。结果见 `analysis/depyf-status.json`：101 个输出可通过 Python `compile`，95 个反编译或编译失败。`recovered/depyf/` 保存原始工具输出，包括失败输出，仅供审查；不代表 101 个函数已行为等价。默认参数、闭包、类作用域和异常处理仍可能错误。
+
+`recovered/source/core.py` 是可独立导入的部分恢复源码，无字节码加载或回退，包含 5 个函数：`fmt_number`、`range_mask`、`points_inside_region`、`available_memory_bytes`、`write_full_pcd`。前三项基于 depyf 输出并恢复默认参数；后两项依据原始指令人工重建。保留原版写入语义，包括原子替换、异常传播和临时文件清理；修正了自动反编译输出中重复替换文件、错误缩进字符串、吞掉异常的问题。
+
+12 项源码对照测试全部通过（3.74 秒）：比较百万点分块筛选、跨 250000 点边界凸包筛选、PCD 字节级一致性、读取往返、文件复制、失败清理、内存信息解析和数字格式化。对照基准为原包字节码，测试中没有模拟或跳过恢复函数。尚未将恢复源码接入 GUI，完整编辑器仍依赖原字节码。
+
+复现新的反编译：在 Python 3.10 环境安装 `tools/requirements-decompile.txt`，运行 `python tools/decompile-depyf.py`；该命令只解析代码对象，不执行目标模块。工具版本固定，但生成的临时变量名称可能变化。
+
+在既有运行镜像中复现源码对照测试：
+
+```bash
+docker run --rm --network none -e QT_QPA_PLATFORM=offscreen -v "$PWD:/work" taffy-runtime:ubuntu24.04 python -m pytest -q -p no:cacheprovider tests/test_recovered_source.py
+```
+
+下一步重点：`load_pcd_data`、`load_full_xyz`、`complete_region` 的控制流，以及 Qt 类/闭包与默认参数。原始指令证据保存在 `analysis/core-python310-disassembly.txt` 和完整反汇编中。
