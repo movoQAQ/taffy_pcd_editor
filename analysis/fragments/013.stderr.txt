@@ -1,0 +1,2 @@
+Unsupported argument found for LIST_EXTEND
+Error decompyling analysis/code-objects/013.pyc: std::bad_cast

@@ -1,0 +1,1 @@
+PycBuffer::getByte(): Unexpected end of stream

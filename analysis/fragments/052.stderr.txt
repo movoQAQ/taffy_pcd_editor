@@ -1,0 +1,2 @@
+Warning: Stack history is empty, something wrong might have happened
+WARNING: Circular reference detected

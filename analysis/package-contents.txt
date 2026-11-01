@@ -1,0 +1,17 @@
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./opt/
+drwxrwxr-x root/root         0 2026-10-20 01:55 ./opt/taffy-editor/
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./opt/taffy-editor/assets/
+-rw-rw-r-- root/root    347777 2026-10-08 11:48 ./opt/taffy-editor/assets/tafei-pcd-editor.png
+-rw-rw-r-- root/root     96655 2026-10-20 01:55 ./opt/taffy-editor/main.pyc
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./usr/
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./usr/bin/
+-rwxr-xr-x root/root        55 2026-10-09 06:09 ./usr/bin/taffy-editor
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./usr/share/
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./usr/share/applications/
+-rw-rw-r-- root/root       161 2026-10-08 11:48 ./usr/share/applications/taffy-editor.desktop
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./usr/share/icons/
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./usr/share/icons/hicolor/
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./usr/share/icons/hicolor/256x256/
+drwxrwxr-x root/root         0 2026-10-08 11:48 ./usr/share/icons/hicolor/256x256/apps/
+-rw-rw-r-- root/root    347777 2026-10-08 11:48 ./usr/share/icons/hicolor/256x256/apps/taffy-editor.png

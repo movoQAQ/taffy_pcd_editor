@@ -1,0 +1,2 @@
+Unsupported opcode: JUMP_IF_NOT_EXC_MATCH (210)
+WARNING: Circular reference detected
