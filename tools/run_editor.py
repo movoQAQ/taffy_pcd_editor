@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 def load_editor(use_recovered=True):
     if sys.version_info[:2] != (3, 10):
         raise RuntimeError('原始 UI 字节码需要 Python 3.10；请运行 tools/setup-local.sh。')
-    path = ROOT / 'original/rootfs/opt/taffy-editor/main.pyc'
+    path = ROOT / 'original/main.pyc'
     name = 'taffy_integrated' if use_recovered else 'taffy_release'
     loader = SourcelessFileLoader(name, str(path))
     module = importlib.util.module_from_spec(importlib.util.spec_from_loader(name, loader))

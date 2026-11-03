@@ -11,7 +11,7 @@ import time
 
 import numpy as np
 import pytest
-from PyQt5.QtCore import QPoint, Qt
+from PyQt5.QtCore import QCoreApplication, QEvent, QPoint, Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtTest import QTest
 from PyQt5.QtWidgets import QApplication, QPushButton
@@ -26,6 +26,17 @@ def wait_until(predicate, timeout=15000):
         assert time.monotonic() < deadline, 'Timed out waiting for Qt background operation'
         QTest.qWait(20)
     QTest.qWait(50)
+
+
+def close_window(window, timeout=15000):
+    # closeEvent also waits for visible-count workers, unlike _editing_busy.
+    wait_until(lambda: not any(worker.isRunning() for worker in window.task_workers), timeout)
+    assert window.close(), 'Window refused to close after background tasks finished'
+    assert not window.isVisible()
+    # Release Qt signal closures and VTK objects before the next parametrized case.
+    window.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    QTest.qWait(100)
 
 
 def click(window, text):
@@ -206,16 +217,13 @@ def test_desktop_workflow(qt_app, monkeypatch, tmp_path, variant):
         assert path.read_bytes() != exported.read_bytes()
         np.testing.assert_array_equal(module.load_full_xyz(path), points)
         report['checks'].append('edited PCD export and original file preserved')
-        assert not exceptions, exceptions
-        assert not dialogs, dialogs
         report['qt_exceptions'] = exceptions
         report['unexpected_dialogs'] = dialogs
     finally:
         if sys.exc_info()[0] is not None:
             print('UI failure state:', window.filter_status.text(), window.region_pick_status.text(), exceptions, dialogs)
-        wait_until(lambda: not window._editing_busy())
-        window.close()
-        QTest.qWait(100)
-    assert not window.isVisible()
+        close_window(window)
+    assert not exceptions, exceptions
+    assert not dialogs, dialogs
     report['checks'].append('clean close')
     (artifacts / f'{variant}-report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')

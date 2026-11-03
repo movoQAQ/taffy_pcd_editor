@@ -12,7 +12,7 @@ def dump_unicode(self, value):
     self._write(data)
 marsh._Marshaller.dispatch[str] = dump_unicode
 root = Path(__file__).resolve().parents[1]
-version, timestamp, magic, code, *_ = load_module(str(root / 'original/rootfs/opt/taffy-editor/main.pyc'))
+version, timestamp, magic, code, *_ = load_module(str(root / 'original/main.pyc'))
 out = root / 'analysis/code-objects'
 out.mkdir(exist_ok=True)
 rows = []

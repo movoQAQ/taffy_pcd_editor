@@ -3,7 +3,7 @@ import ast, json, marshal, types
 from pathlib import Path
 import depyf
 root=Path(__file__).resolve().parents[1]
-co=marshal.loads((root/'original/rootfs/opt/taffy-editor/main.pyc').read_bytes()[16:])
+co=marshal.loads((root/'original/main.pyc').read_bytes()[16:])
 out=root/'recovered/depyf'
 out.mkdir(exist_ok=True)
 rows=[]

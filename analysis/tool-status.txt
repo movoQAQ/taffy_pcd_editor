@@ -1,2 +1,0 @@
-pycdas exit: 0
-pycdc exit: 139

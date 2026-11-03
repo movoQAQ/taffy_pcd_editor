@@ -1,9 +1,0 @@
-Package: taffy-editor
-Version: 1.2
-Section: graphics
-Priority: optional
-Architecture: all
-Depends: python3 (>= 3.10), python3 (<< 3.11), python3-pyqt5, python3-numpy, python3-scipy, python3-vtk9, python3-open3d
-Maintainer: taffy editor
-Description: taffy point cloud editor
- Local PCD point cloud editor with XYZ range selection, filtering and editing.

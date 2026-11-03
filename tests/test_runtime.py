@@ -7,7 +7,7 @@ from scipy.spatial import ConvexHull
 
 @pytest.fixture(scope='session')
 def app_module():
-    path = Path(__file__).resolve().parents[1] / 'original/rootfs/opt/taffy-editor/main.pyc'
+    path = Path(__file__).resolve().parents[1] / 'original/main.pyc'
     loader = SourcelessFileLoader('taffy_original', str(path))
     spec = importlib.util.spec_from_loader(loader.name, loader)
     module = importlib.util.module_from_spec(spec)

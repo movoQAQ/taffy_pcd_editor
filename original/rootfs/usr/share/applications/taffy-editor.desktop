@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=taffy编辑器
-Comment=PCD 点云编辑器
-Exec=taffy-editor
-Icon=taffy-editor
-Terminal=false
-Categories=Graphics;Science;

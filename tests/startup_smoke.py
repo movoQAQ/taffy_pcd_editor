@@ -3,7 +3,7 @@ import runpy
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QTimer
-p = Path(__file__).resolve().parents[1] / 'original/rootfs/opt/taffy-editor/main.pyc'
+p = Path(__file__).resolve().parents[1] / 'original/main.pyc'
 m = runpy.run_path(str(p), run_name='taffy_smoke')
 app = QApplication([])
 window = m['PointCloudWindow']()

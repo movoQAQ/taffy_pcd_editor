@@ -14,7 +14,7 @@ import pytest
 from PyQt5.QtCore import QPoint, Qt
 from PyQt5.QtTest import QTest
 
-from test_ui import click, qt_app, wait_until
+from test_ui import click, close_window, qt_app, wait_until
 from tools.run_editor import ROOT, load_editor
 
 
@@ -125,18 +125,18 @@ def test_real_pcd(qt_app, monkeypatch, tmp_path, variant):
         report['export_points'] = len(completed)
         report['export_fields'] = ['x', 'y', 'z']
         report['checks'].append('edited XYZ export roundtrip')
-        assert not dialogs, dialogs
-        assert not exceptions, exceptions
     finally:
         if sys.exc_info()[0] is not None:
             print('UI failure state:', window.filter_status.text(), window.region_pick_status.text(), exceptions, dialogs)
+            print('UI import requests/active layer:', window.full_load_request, window.active_layer_id,
+                  [layer['id'] for layer in window.layers])
             print('UI layers/workers:', len(window.layers), [list(layer) for layer in window.layers],
-                  [(type(worker).__name__, worker.isRunning()) for worker in window.task_workers])
-        wait_until(lambda: not window._editing_busy(), 30000)
-        window.close()
-        QTest.qWait(100)
+                  [(type(worker).__name__, worker.isRunning(), worker is window.visible_count_worker)
+                   for worker in window.task_workers])
+        close_window(window, 30000)
         assert hashlib.sha256(path.read_bytes()).hexdigest() == original_hash
-    assert not window.isVisible()
+    assert not dialogs, dialogs
+    assert not exceptions, exceptions
     report['checks'].append('clean close and unchanged input SHA-256')
     report['qt_exceptions'] = exceptions
     report['unexpected_dialogs'] = dialogs
