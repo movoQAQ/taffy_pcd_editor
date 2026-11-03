@@ -1,5 +1,8 @@
-//! Small binary PCD core. Records stay in their original little-endian layout;
-//! filtering changes only their order and selection, including extra fields.
+//! PCD reader for ASCII, binary and LZF-compressed records. Decoded records use
+//! their declared little-endian field layout; edits preserve all field bytes.
+
+mod ascii;
+mod compressed;
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -78,11 +81,17 @@ impl PointCloud {
         let mut reader = BufReader::new(file);
         let (header, header_size) = read_header(&mut reader)?;
         let data = header_values(&header, "DATA")?;
-        if data.as_slice() != ["binary"] {
-            return Err(invalid(
-                "only DATA binary is supported; ASCII and binary_compressed are not supported",
-            ));
-        }
+        let encoding = match data.as_slice() {
+            [mode] if matches!(mode.as_str(), "ascii" | "binary" | "binary_compressed") => {
+                mode.as_str()
+            }
+            _ => {
+                return Err(invalid(format!(
+                    "unsupported DATA encoding: {}; expected ascii, binary or binary_compressed",
+                    data.join(" ")
+                )))
+            }
+        };
         let version = match header.get("VERSION") {
             Some(values) if values.len() == 1 && matches!(values[0].as_str(), ".7" | "0.7") => {
                 values[0].clone()
@@ -165,9 +174,6 @@ impl PointCloud {
         let actual_bytes = file_size
             .checked_sub(header_size)
             .ok_or_else(|| invalid("PCD file changed while reading its header"))?;
-        if expected_bytes != actual_bytes {
-            return Err(invalid(format!("binary payload length mismatch: header requires {expected_bytes} bytes, file has {actual_bytes}")));
-        }
         let viewpoint = match header.get("VIEWPOINT") {
             Some(values) => {
                 if values.len() != 7
@@ -183,13 +189,26 @@ impl PointCloud {
             }
             None => "0 0 0 1 0 0 0".to_owned(),
         };
-        // Validate the real file length before reserving from untrusted POINTS.
-        let mut payload = Vec::new();
-        payload
-            .try_reserve_exact(actual_bytes)
-            .map_err(|error| invalid(format!("cannot allocate PCD payload: {error}")))?;
-        payload.resize(actual_bytes, 0);
-        reader.read_exact(&mut payload)?;
+        let payload = match encoding {
+            "ascii" => ascii::read(&mut reader, &fields, points, record_size, actual_bytes)?,
+            "binary_compressed" => {
+                compressed::read(&mut reader, &fields, points, record_size, actual_bytes)?
+            }
+            "binary" => {
+                // Validate the file length before reserving from untrusted POINTS.
+                if expected_bytes != actual_bytes {
+                    return Err(invalid(format!("binary payload length mismatch: header requires {expected_bytes} bytes, file has {actual_bytes}")));
+                }
+                let mut payload = Vec::new();
+                payload
+                    .try_reserve_exact(actual_bytes)
+                    .map_err(|error| invalid(format!("cannot allocate PCD payload: {error}")))?;
+                payload.resize(actual_bytes, 0);
+                reader.read_exact(&mut payload)?;
+                payload
+            }
+            _ => unreachable!("validated DATA encoding"),
+        };
         let mut trailing = [0];
         if reader.read(&mut trailing)? != 0 {
             return Err(invalid("PCD file grew while reading its payload"));
@@ -679,6 +698,7 @@ mod tests {
             normal
                 .replace("WIDTH 1", "WIDTH 18446744073709551615")
                 .replace("POINTS 1", "POINTS 18446744073709551615"),
+            normal.replace("DATA binary", "DATA invalid"),
             normal.replace("DATA binary", "DATA ascii"),
             normal.replace("DATA binary", "DATA binary_compressed"),
             normal.replace("DATA binary", "WIDTH 1\nDATA binary"),
@@ -775,5 +795,62 @@ mod tests {
             .file_name()
             .to_string_lossy()
             .starts_with(".taffy-pcd-")));
+    }
+    #[test]
+    fn ascii_import_and_binary_export_preserve_declared_fields_and_source() {
+        let directory = TestDirectory::new();
+        let header = "VERSION .7\nFIELDS z descriptor x normal y\nSIZE 8 2 4 4 4\nTYPE F U F F F\nCOUNT 1 3 1 3 1\nWIDTH 2\nHEIGHT 1\nVIEWPOINT 1 2 3 0.5 0.5 0.5 0.5\nPOINTS 2\nDATA ascii\n";
+        let text = b"0.25 5 7 9 1 0 1 -1 -2\n1.25 5 7 9 2 0 1 -1 -1";
+        let input = directory.write("source-ascii.pcd", header, text);
+        let original = fs::read(&input).unwrap();
+        let cloud = PointCloud::read(&input).unwrap();
+        assert_eq!(cloud.xyz(1), [2.0, -1.0, 1.25]);
+        assert_eq!(cloud.record_size(), 34);
+        let output = directory.0.join("selected.pcd");
+        cloud.write_selected(&output, &[1]).unwrap();
+        let written = PointCloud::read(&output).unwrap();
+        let mut expected = 1.25f64.to_le_bytes().to_vec();
+        for value in [5u16, 7, 9] {
+            expected.extend_from_slice(&value.to_le_bytes());
+        }
+        for value in [2.0f32, 0.0, 1.0, -1.0, -1.0] {
+            expected.extend_from_slice(&value.to_le_bytes());
+        }
+        assert_eq!(written.payload, expected);
+        assert_eq!(written.fields, cloud.fields);
+        assert_eq!(written.viewpoint, cloud.viewpoint);
+        assert_eq!(fs::read(&input).unwrap(), original);
+        assert!(cloud.write_selected(&input, &[0]).is_err());
+    }
+
+    #[test]
+    fn decoded_ascii_xyz_uses_the_same_finite_coordinate_validation() {
+        let directory = TestDirectory::new();
+        let ascii_header = header(1).replace("DATA binary", "DATA ascii");
+        for value in ["nan", "inf", "-inf"] {
+            let text = format!("{value} 0 0\n");
+            let path = directory.write("nonfinite-ascii.pcd", &ascii_header, text.as_bytes());
+            assert!(PointCloud::read(&path)
+                .unwrap_err()
+                .to_string()
+                .contains("non-finite XYZ"));
+        }
+        let path = directory.write(
+            "overflow-ascii.pcd",
+            &ascii_header.replace("SIZE 4 4 4", "SIZE 8 8 8"),
+            b"1e300 0 0\n",
+        );
+        assert!(PointCloud::read(&path)
+            .unwrap_err()
+            .to_string()
+            .contains("float32 range"));
+        for (encoding, bytes) in [("ascii", &b""[..]), ("binary_compressed", &[0; 8][..])] {
+            let path = directory.write(
+                "empty-decoded.pcd",
+                &header(0).replace("binary", encoding),
+                bytes,
+            );
+            assert!(PointCloud::read(&path).unwrap().is_empty());
+        }
     }
 }

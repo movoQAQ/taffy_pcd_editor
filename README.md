@@ -24,7 +24,7 @@
 
 几何语义沿用原版：对每个边界点加入 XYZ 各方向的八角偏移，再计算三维凸包。外扩为 0 时不能全部共面；正外扩可使平面上的选点形成体积。删除范围是凸包与当前 **XYZ 作用范围** 的交集，区域外点保持原序。完全覆盖图层时会拒绝删除，至少保留一个点。
 
-范围、外扩或选点改变后需要重新计算；切换、隐藏或移除目标图层会清除旧选区。后台任务检查来源图层和预览版本，迟到结果不会恢复已删除图层。法线、强度及其他字段随剩余原始记录逐字节保留，不重新估算法线。
+范围、外扩或选点改变后需要重新计算；切换、隐藏或移除目标图层会清除旧选区。后台任务检查来源图层和预览版本，迟到结果不会恢复已删除图层。法线、强度及其他字段随剩余的已解码记录逐字节保留，不重新估算法线。
 
 ## 其他操作
 
@@ -32,7 +32,7 @@
 - 图层复选框控制显隐；行尾 ×、「删除选中图层」或 Delete 移除整个场景图层，不删除磁盘 PCD。
 - F /「适配视图」显示全部可见图层；「俯视」切换顶视角。
 - 体素滤波在 XYZ 范围内每个体素保留第一个点，范围外全部保留；结果成为新图层。连续滤波和区域删除只处理当前图层剩余的点。
-- 导出保留所有选中点的原始字段、COUNT 和 VIEWPOINT，输出 HEIGHT=1 的非组织点云；不会覆盖已有文件或源文件。
+- 导出保留所有选中点的原始字段、COUNT 和 VIEWPOINT，输出 `DATA binary`、HEIGHT=1 的非组织点云；不会覆盖已有文件或源文件。
 
 读取、凸包计数、删除、滤波与导出在后台运行。已启动的导出完成其快照；关闭窗口时等待已启动的数据任务结束。
 
@@ -57,12 +57,24 @@ python3 -B -E -s tests/ui_region.py --pcd /path/to/map.pcd --output-dir /tmp/taf
 python3 -B -E -s tests/ui_smoke.py --pcd /path/to/map.pcd --output-dir /tmp/taffy-smoke-ui
 ```
 
+另有 PCL 原生读取器独立验证（需系统 `pcl_io` 开发库、C++ 编译器和 `pkg-config`；不参与应用运行）：
+
+```bash
+python3 -B -E -s tests/pcd_formats.py --pcd-dir /path/to/pcd-directory --output-dir /tmp/taffy-formats --gui
+```
+
+该脚本比较每个输入的全部字段记录、点数和 VIEWPOINT，并核对源文件哈希；`--gui` 使用真实 GUI 验证导入及编辑导出流程。
+
 `TAFFY_UI_STATE` 仅在测试时启用只读状态和控件坐标；测试通过真实鼠标键盘完成操作，SciPy 独立计算凸包删除结果，NumPy 独立计算体素滤波结果，并核对导出的全部记录和源文件哈希。测试结果与地图不提交到 Git。
 
-本机验证（2026-11-03）：45 项 Rust 测试、Clippy 与格式检查通过；240 组凸包案例、466,033 次点包含判断与 SciPy 一致。使用 `RMUC2027_V1.0.0.pcd` 的 100 万点地图完成真实 GUI 选区删除：删除 112,724 点，剩余 887,276 点，导出包含 `normal_x/y/z` 的所有原始记录与独立参考逐字节一致，源文件哈希不变。
+本机验证（2026-11-03）：61 项 Rust 测试、Clippy 与格式检查通过；240 组凸包案例、466,033 次点包含判断与 SciPy 一致。使用 `RMUC2027_V1.0.0.pcd` 的 100 万点地图完成真实 GUI 选区删除：删除 112,724 点，剩余 887,276 点，导出包含 `normal_x/y/z` 的所有原始记录与独立参考逐字节一致，源文件哈希不变。
+
+ERASOR2 格式兼容验证：目录中 8 个文件（3 个 ASCII、1 个 binary_compressed、4 个 binary），共 12,610,480 点，Rust 解码导出与系统 PCL 1.14 的全部字段记录逐字节一致；真实 GUI 全部导入成功，包括 7,742,053 点的最大 ASCII。ASCII 与压缩文件的 GUI 导出也通过独立核对，8 个源文件哈希不变。
 
 ## 支持范围与历史
 
-支持 `DATA binary` PCD；XYZ 为单值 F4/F8，编辑坐标按 float32 计算。ASCII、binary_compressed、非有限或不能表示为 float32 的 XYZ 会明确报错。区域补点、统计离群点和半径滤波尚未迁移。
+支持 PCD 的 `DATA ascii`、`DATA binary` 和 `DATA binary_compressed` 三种标准存储方式。ASCII 逐行解析，按 TYPE/SIZE/COUNT 保留数值类型和字段顺序；压缩格式通过 LZF 解压并还原字段排列。二进制及解压后的字段字节原样保留，ASCII 保留按声明精度解析的数值，不保留文本排版。格式依据见 [PCL 官方说明](https://pointclouds.org/documentation/tutorials/pcd_file_format.html)。
+
+XYZ 为单值 F4/F8，编辑坐标按 float32 计算；非有限或不能表示为 float32 的 XYZ、损坏载荷及不一致的点数会明确报错。区域补点、统计离群点和半径滤波尚未迁移。
 
 Python 源码恢复版保留在 Git 历史提交 [`7931863`](https://github.com/movoQAQ/taffy_pcd_editor/tree/7931863d52f222c5ef7bb191f576426a473d0297)，当前目录不需要原版字节码、虚拟环境或 Python 运行模块。Rust 核心最初由该提交中的 `rust/` 独立原型迁入。上游素材来自 [taffy-editor v1.2](https://github.com/LYJX-robotic-CC/taffy-editor/releases/tag/v1.2)，原有说明见 `assets/UPSTREAM-README.md`；本仓库没有为原素材重新声明许可。
