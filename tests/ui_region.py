@@ -9,6 +9,7 @@ records, including normals, against the unchanged source PCD.
 from __future__ import annotations
 
 import argparse
+import ctypes
 import itertools
 import json
 import os
@@ -23,7 +24,37 @@ from ui_smoke import X11Driver, layer, pcd_parts, sha256
 
 
 class RegionDriver(X11Driver):
+    def activate(self):
+        class ClientMessage(ctypes.Structure):
+            _fields_ = [("type", ctypes.c_int), ("serial", ctypes.c_ulong),
+                        ("send_event", ctypes.c_int), ("display", ctypes.c_void_p),
+                        ("window", ctypes.c_ulong), ("message_type", ctypes.c_ulong),
+                        ("format", ctypes.c_int), ("data", ctypes.c_long * 5)]
+        self.x11.XInternAtom.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int]
+        self.x11.XInternAtom.restype = ctypes.c_ulong
+        self.x11.XSendEvent.argtypes = [ctypes.c_void_p, ctypes.c_ulong,
+                                       ctypes.c_int, ctypes.c_long, ctypes.c_void_p]
+        event = (ctypes.c_long * 24)()
+        message = ClientMessage.from_buffer(event)
+        message.type, message.send_event = 33, 1
+        message.display, message.window = self.display, self.window
+        message.message_type = self.x11.XInternAtom(self.display, b"_NET_ACTIVE_WINDOW", False)
+        message.format, message.data[0] = 32, 2
+        self.x11.XSendEvent(self.display, self.root, False,
+                            (1 << 19) | (1 << 20), ctypes.byref(event))
+        self.x11.XSync(self.display, False)
+        self.pump(0.15)
+
+    def chord(self, *names):
+        self.activate()
+        super().chord(*names)
+
+    def screenshot(self, path):
+        self.activate()
+        super().screenshot(path)
+
     def move_to(self, x: float, y: float):
+        self.activate()
         scale = self.state().get("pixels_per_point", 1.0)
         ox, oy = self.origin()
         self.xtst.XTestFakeMotionEvent(
@@ -65,6 +96,7 @@ class RegionDriver(X11Driver):
         raise AssertionError(f"Could not scroll {key} into the right panel")
 
     def click(self, key: str):
+        self.activate()
         if key.startswith("region_") or key in ("filter_button", "filter_section", "range_section"):
             self.ensure_visible(key)
         super().click(key)
@@ -177,6 +209,7 @@ def run(args) -> dict:
         driver.screenshot(output / "01-original-assets.png")
         record("Opened native GUI with original assets and the complete source cloud")
 
+        driver.click("region_convex_mode")
         driver.click("region_start")
         driver.wait(lambda s: s.get("region", {}).get("picking"), "region picking enabled")
         pick_candidate(0)

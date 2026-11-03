@@ -15,6 +15,8 @@ use std::{
 };
 use viewport::{RenderLayer, SelectionOverlay, Viewport};
 
+type RegionPreview = (Arc<Region>, Arc<Vec<[f32; 3]>>);
+
 const TITLE: &str = "Taffy PCD Editor · Rust";
 
 enum Message {
@@ -22,7 +24,7 @@ enum Message {
     Filtered(u64, Result<Layer, String>),
     Exported(PathBuf, Result<(), String>),
     Picked(Option<PathBuf>),
-    RegionPreview(u64, u64, Result<(Arc<Region>, usize), String>),
+    RegionPreview(u64, u64, Result<RegionPreview, String>),
     RegionDeleted(u64, Result<(Layer, usize), String>),
 }
 
@@ -33,6 +35,8 @@ enum PathAction {
 }
 
 struct RegionEdit {
+    polygon: bool,
+    highlight: Option<Arc<Vec<[f32; 3]>>>,
     layer_id: Option<u64>,
     picking: bool,
     picks: Vec<[f32; 3]>,
@@ -47,6 +51,8 @@ struct RegionEdit {
 impl Default for RegionEdit {
     fn default() -> Self {
         Self {
+            polygon: true,
+            highlight: None,
             layer_id: None,
             picking: false,
             picks: Vec::new(),
@@ -55,7 +61,7 @@ impl Default for RegionEdit {
             hull: None,
             count: None,
             computing: false,
-            status: "双击点云选择边界点，至少 4 个不同点。".into(),
+            status: "选择模式，开始绘制区域。".into(),
         }
     }
 }
@@ -64,6 +70,7 @@ impl RegionEdit {
     fn invalidate(&mut self) {
         self.revision = self.revision.wrapping_add(1);
         self.hull = None;
+        self.highlight = None;
         self.count = None;
         self.computing = false;
     }
@@ -79,7 +86,7 @@ impl RegionEdit {
         self.layer_id = None;
         self.picking = false;
         self.picks.clear();
-        self.status = "双击点云选择边界点，至少 4 个不同点。".into();
+        self.status = "选择模式，开始绘制区域。".into();
     }
 }
 
@@ -207,11 +214,14 @@ impl Editor {
                     }
                     self.region.computing = false;
                     match result {
-                        Ok((hull, count)) => {
+                        Ok((hull, highlight)) => {
+                            let count = highlight.len();
+                            self.region.highlight = Some(highlight);
                             self.region.hull = Some(hull);
                             self.region.count = Some(count);
+                            self.status = "选区预览已就绪".into();
                             self.region.status =
-                                format!("凸包内命中 {count} 点（受 XYZ 范围约束）。");
+                                format!("选区命中 {count} 点；粉色为待删除点，可旋转检查。");
                         }
                         Err(error) => {
                             self.region.status = error.clone();
@@ -310,7 +320,12 @@ impl Editor {
         self.region.clear();
         self.region.layer_id = Some(layer.id);
         self.region.picking = true;
-        self.region.status = "在点云上双击选点；可旋转视图选择不同高度。".into();
+        if self.region.polygon {
+            self.viewport.top();
+            self.region.status = "单击画轮廓，可点空白处；完成后点击闭合并预览。".into();
+        } else {
+            self.region.status = "在点云上双击选点；可旋转视图选择不同高度。".into();
+        }
         // Read-only automation targets. They only locate real mouse clicks;
         // QA obtains the actual selected coordinates from the picking result.
         self.qa_candidates.clear();
@@ -358,16 +373,28 @@ impl Editor {
         let points = layer.points.clone();
         let picks = self.region.picks.clone();
         let expansion = self.region.expand_cm / 100.0;
+        let polygon = self.region.polygon;
         let ranges = self.ranges;
         self.region.invalidate();
         self.region.picking = false;
         self.region.computing = true;
-        self.region.status = "正在计算凸包和区域点数…".into();
+        self.region.status = "正在计算选区并准备高亮…".into();
         let revision = self.region.revision;
         self.job(ctx, move || {
-            let result = Region::from_picks(&picks, expansion).map(|hull| {
-                let count = points.iter().filter(|p| hull.contains(**p, ranges)).count();
-                (Arc::new(hull), count)
+            let geometry = if polygon {
+                Region::from_polygon(&picks, ranges[2])
+            } else {
+                Region::from_picks(&picks, expansion)
+            };
+            let result = geometry.and_then(|hull| {
+                let mut highlight = Vec::new();
+                for &point in points.iter().filter(|p| hull.contains(**p, ranges)) {
+                    highlight
+                        .try_reserve(1)
+                        .map_err(|e| format!("无法分配预览点：{e}"))?;
+                    highlight.push(point);
+                }
+                Ok((Arc::new(hull), Arc::new(highlight)))
             });
             Message::RegionPreview(source, revision, result)
         });
@@ -399,8 +426,41 @@ impl Editor {
                 .selected_layer()
                 .is_some_and(|l| l.visible && !l.points.is_empty());
         ui.add_enabled_ui(ready, |ui| {
+            let old_mode = self.region.polygon;
+            ui.horizontal(|ui| {
+                let polygon = ui.selectable_value(&mut self.region.polygon, true, "俯视多边形");
+                self.mark("region_polygon_mode", &polygon);
+                let convex = ui.selectable_value(&mut self.region.polygon, false, "高级：三维凸包");
+                self.mark("region_convex_mode", &convex);
+            });
+            if old_mode != self.region.polygon {
+                self.region.clear();
+            }
+            if self.region.polygon {
+                ui.label("地图 Z 高度 / 米（不是相对地面 h）");
+                let old = self.ranges;
+                ui.horizontal(|ui| {
+                    ui.label("下限");
+                    let low = ui.add(
+                        egui::DragValue::new(&mut self.ranges[2][0])
+                            .speed(0.02)
+                            .max_decimals(3),
+                    );
+                    self.mark("region_z_min", &low);
+                    ui.label("上限");
+                    let high = ui.add(
+                        egui::DragValue::new(&mut self.ranges[2][1])
+                            .speed(0.02)
+                            .max_decimals(3),
+                    );
+                    self.mark("region_z_max", &high);
+                });
+                self.region.ranges_changed(old, self.ranges);
+            }
             let start = ui.button(if self.region.picking {
                 "停止选点"
+            } else if self.region.polygon {
+                "开始绘制新轮廓"
             } else {
                 "开始选点区域"
             });
@@ -412,7 +472,11 @@ impl Editor {
                     self.start_region();
                 }
             }
-            ui.weak("双击拾取真实点，拖动可旋转视图。");
+            ui.weak(if self.region.polygon {
+                "单击添加顶点；可点空白处。绘制时锁定视角，闭合后可旋转检查。"
+            } else {
+                "双击拾取真实点，拖动可旋转视图。"
+            });
             ui.label(format!("已选择 {} 个边界点", self.region.picks.len()));
             ui.horizontal(|ui| {
                 let undo =
@@ -429,23 +493,38 @@ impl Editor {
                     self.region.clear();
                 }
             });
-            ui.horizontal(|ui| {
-                ui.label("XYZ 外扩 / 厘米");
-                let expand = ui.add(
-                    egui::DragValue::new(&mut self.region.expand_cm)
-                        .speed(1.0)
-                        .range(0.0..=10000.0)
-                        .max_decimals(1),
-                );
-                self.mark("region_expand", &expand);
-                if expand.changed() {
+            if self.region.polygon && !self.region.picking && !self.region.picks.is_empty() {
+                let edit = ui.button("继续绘制轮廓");
+                self.mark("region_continue", &edit);
+                if edit.clicked() {
+                    self.viewport.top();
                     self.region.invalidate();
-                    self.region.status = "外扩已改变，请重新计算凸包。".into();
+                    self.region.picking = true;
                 }
-            });
+            }
+            if !self.region.polygon {
+                ui.horizontal(|ui| {
+                    ui.label("XYZ 外扩 / 厘米");
+                    let expand = ui.add(
+                        egui::DragValue::new(&mut self.region.expand_cm)
+                            .speed(1.0)
+                            .range(0.0..=10000.0)
+                            .max_decimals(1),
+                    );
+                    self.mark("region_expand", &expand);
+                    if expand.changed() {
+                        self.region.invalidate();
+                        self.region.status = "外扩已改变，请重新计算凸包。".into();
+                    }
+                });
+            }
             let calculate = ui.add_enabled(
-                self.region.picks.len() >= 4,
-                egui::Button::new("计算凸包区域"),
+                self.region.picks.len() >= if self.region.polygon { 3 } else { 4 },
+                egui::Button::new(if self.region.polygon {
+                    "闭合并预览选区"
+                } else {
+                    "计算凸包区域"
+                }),
             );
             self.mark("region_calculate", &calculate);
             if calculate.clicked() {
@@ -466,7 +545,11 @@ impl Editor {
                 .small()
                 .color(theme::SECTION),
         );
-        ui.weak("生成编辑图层，原图层保留并隐藏。外扩为 0 时，边界点须不共面。");
+        ui.weak(if self.region.polygon {
+            "选择轮廓与高度内全部点，包含遮挡点；支持凹轮廓，不允许自交。修改高度后需重新预览。"
+        } else {
+            "生成编辑图层，原图层保留并隐藏。外扩为 0 时，边界点须不共面。"
+        });
     }
 
     fn path_modal(&mut self, ctx: &egui::Context) {
@@ -609,7 +692,7 @@ impl Editor {
             "selected_layer_id":self.scene.selected,"busy":self.pending>0,"status":self.status,
             "widgets":self.widgets,"error":self.error,"panels":self.panels,
             "ranges": self.ranges, "projected_candidates":self.projected_candidates,
-            "region": { "layer_id":self.region.layer_id,"picking":self.region.picking,
+            "region": { "polygon":self.region.polygon, "highlight_points":self.region.highlight.as_ref().map_or(0, |p|p.len()), "layer_id":self.region.layer_id,"picking":self.region.picking,
                 "picks":self.region.picks,"expand_cm":self.region.expand_cm,"count":self.region.count,
                 "computing":self.region.computing,"status":self.region.status,
                 "vertices":self.region.hull.as_ref().map(|h| &h.vertices),
@@ -652,7 +735,9 @@ impl eframe::App for Editor {
             if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
                 self.region.clear();
             }
-            if ctx.input(|i| i.key_pressed(egui::Key::F)) {
+            if !(self.region.polygon && self.region.picking)
+                && ctx.input(|i| i.key_pressed(egui::Key::F))
+            {
                 self.fit();
             }
         }
@@ -670,12 +755,18 @@ impl eframe::App for Editor {
                     );
                     ui.label(RichText::new("本地版 · Rust").color(theme::MUTED));
                     ui.separator();
-                    let fit = ui.button("适配视图  F");
+                    let fit = ui.add_enabled(
+                        !(self.region.polygon && self.region.picking),
+                        egui::Button::new("适配视图  F"),
+                    );
                     self.mark("fit_button", &fit);
                     if fit.clicked() {
                         self.fit();
                     }
-                    let top = ui.button("俯视");
+                    let top = ui.add_enabled(
+                        !(self.region.polygon && self.region.picking),
+                        egui::Button::new("俯视"),
+                    );
                     self.mark("top_button", &top);
                     if top.clicked() {
                         self.viewport.top();
@@ -944,7 +1035,7 @@ impl eframe::App for Editor {
             .show(ctx, |ui| {
                 let rect = ui.available_rect_before_wrap();
                 self.widgets.insert("viewport".into(), rect_values(rect));
-                let layers = self
+                let mut layers: Vec<RenderLayer> = self
                     .scene
                     .layers
                     .iter()
@@ -955,27 +1046,32 @@ impl eframe::App for Editor {
                         tint: [1.0, 1.0, 1.0],
                     })
                     .collect();
+                if let Some(points) = &self.region.highlight {
+                    layers.push(RenderLayer {
+                        id: 0,
+                        points: Arc::clone(points),
+                        tint: [0.95, 0.12, 0.48],
+                    });
+                }
                 let overlay = self.region.layer_id.map(|layer_id| SelectionOverlay {
                     layer_id,
+                    polygon: self.region.polygon,
                     picking: self.region.picking && self.pending == 0,
-                    picks: self.region.picks.clone(),
+                    picks: if self.region.polygon {
+                        self.region
+                            .picks
+                            .iter()
+                            .map(|p| [p[0], p[1], self.ranges[2][0]])
+                            .collect()
+                    } else {
+                        self.region.picks.clone()
+                    },
                     ranges: self.ranges,
                     hull_edges: self
                         .region
                         .hull
                         .as_ref()
-                        .map(|h| {
-                            h.triangles
-                                .iter()
-                                .flat_map(|t| {
-                                    [
-                                        [h.vertices[t[0]], h.vertices[t[1]]],
-                                        [h.vertices[t[1]], h.vertices[t[2]]],
-                                        [h.vertices[t[2]], h.vertices[t[0]]],
-                                    ]
-                                })
-                                .collect()
-                        })
+                        .map(|h| h.edges())
                         .unwrap_or_default(),
                 });
                 if let Some(point) = self.viewport.show(ui, layers, self.point_size, overlay) {
@@ -985,7 +1081,7 @@ impl eframe::App for Editor {
                         self.region.picks.push(point);
                         self.region.invalidate();
                         self.region.status = format!(
-                            "已选择 {} 个点；选好后计算凸包区域。",
+                            "已添加 {} 个顶点；完成后计算并预览选区。",
                             self.region.picks.len()
                         );
                     }
@@ -1040,7 +1136,7 @@ fn main() -> eframe::Result {
     let mut paths = Vec::new();
     for arg in std::env::args_os().skip(1) {
         if arg == "--help" || arg == "-h" {
-            println!("Taffy PCD Editor · Rust\n用法: taffy-pcd-editor [文件.pcd ...]\n无参数打开 GUI；支持导入、图层显隐/删除、凸包区域删除、体素滤波和字段完整导出。");
+            println!("Taffy PCD Editor · Rust\n用法: taffy-pcd-editor [文件.pcd ...]\n无参数打开 GUI；支持导入、图层显隐/删除、多边形高度选区、高级凸包、体素滤波和字段完整导出。");
             return Ok(());
         }
         paths.push(PathBuf::from(arg));
@@ -1078,6 +1174,7 @@ mod editor_state_tests {
         let mut state = RegionEdit {
             layer_id: Some(7),
             count: Some(10),
+            highlight: Some(Arc::new(vec![[0.0; 3]])),
             computing: true,
             picks: vec![[0.0, 0.0, 0.0]],
             ..Default::default()
@@ -1090,6 +1187,7 @@ mod editor_state_tests {
         assert_eq!(state.layer_id, Some(7));
         assert_eq!(state.picks.len(), 1);
         assert!(state.count.is_none());
+        assert!(state.highlight.is_none());
         assert!(!state.computing);
         assert_ne!(state.revision, request_revision);
     }

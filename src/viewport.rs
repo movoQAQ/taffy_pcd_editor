@@ -17,6 +17,7 @@ pub struct RenderLayer {
 /// and displays the current selection, without mutating source cloud records.
 pub struct SelectionOverlay {
     pub layer_id: u64,
+    pub polygon: bool,
     pub picking: bool,
     pub picks: Vec<[f32; 3]>,
     pub hull_edges: Vec<[[f32; 3]; 2]>,
@@ -75,20 +76,22 @@ impl Viewport {
         let size = ui.available_size().max(egui::vec2(1.0, 1.0));
         let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click_and_drag());
         ui.painter().rect_filled(rect, 0.0, BACKGROUND);
+        let drawing = overlay.as_ref().is_some_and(|s| s.polygon && s.picking);
         let aspect = rect.width() / rect.height().max(1.0);
         let delta = response.drag_delta();
-        if response.dragged_by(egui::PointerButton::Primary) {
+        if !drawing && response.dragged_by(egui::PointerButton::Primary) {
             self.camera.yaw -= delta.x * 0.007;
             self.camera.pitch = (self.camera.pitch + delta.y * 0.007).clamp(-1.55, 1.55);
             ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
         }
-        if response.dragged_by(egui::PointerButton::Secondary)
-            || response.dragged_by(egui::PointerButton::Middle)
+        if !drawing
+            && (response.dragged_by(egui::PointerButton::Secondary)
+                || response.dragged_by(egui::PointerButton::Middle))
         {
             self.camera.pan(delta.x, delta.y, rect.height(), aspect);
             ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
         }
-        if response.hovered() {
+        if response.hovered() && !drawing {
             let scroll = ui.input_mut(|input| {
                 let scroll = input.smooth_scroll_delta.y;
                 input.smooth_scroll_delta.y = 0.0;
@@ -98,7 +101,16 @@ impl Viewport {
         }
         let mut picked = None;
         let double_clicked = self.clicks.update(&response);
-        if double_clicked {
+        if drawing {
+            if response.clicked_by(egui::PointerButton::Primary) {
+                if let (Some(cursor), Some(selection)) =
+                    (response.interact_pointer_pos(), overlay.as_ref())
+                {
+                    picked = Projection::new(self.camera, rect)
+                        .on_z_plane(cursor, selection.ranges[2][0]);
+                }
+            }
+        } else if double_clicked {
             if let Some(selection) = overlay.as_ref().filter(|selection| selection.picking) {
                 if let Some(cursor) = response.interact_pointer_pos() {
                     picked = pick_point(
@@ -150,6 +162,28 @@ impl Viewport {
         if let Some(selection) = &overlay {
             let painter = ui.painter().with_clip_rect(rect);
             let projection = Projection::new(self.camera, rect);
+            if selection.polygon && selection.hull_edges.is_empty() {
+                for pair in selection.picks.windows(2) {
+                    if let (Some((a, _)), Some((b, _))) = (
+                        projection.unbounded_point(pair[0]),
+                        projection.unbounded_point(pair[1]),
+                    ) {
+                        painter.line_segment([a, b], egui::Stroke::new(2.0_f32, SELECTION_COLOR));
+                    }
+                }
+                if drawing && response.hovered() {
+                    if let (Some(last), Some(cursor)) =
+                        (selection.picks.last(), response.hover_pos())
+                    {
+                        if let Some((a, _)) = projection.unbounded_point(*last) {
+                            painter.line_segment(
+                                [a, cursor],
+                                egui::Stroke::new(1.0_f32, SELECTION_COLOR),
+                            );
+                        }
+                    }
+                }
+            }
             for [start, end] in &selection.hull_edges {
                 // Clip against the editing ranges so the preview follows the
                 // same limits as the cloud and subsequent deletion.
@@ -290,6 +324,26 @@ impl Projection {
             camera,
             rect,
         }
+    }
+
+    /// Intersect the orthographic cursor ray with a world Z plane; no cloud hit needed.
+    fn on_z_plane(&self, cursor: egui::Pos2, z: f32) -> Option<[f32; 3]> {
+        if !self.rect.contains(cursor) || !z.is_finite() {
+            return None;
+        }
+        let aspect = self.rect.width() / self.rect.height();
+        let half = self.camera.half_height(aspect);
+        let x = (2.0 * (cursor.x - self.rect.left()) / self.rect.width() - 1.0) * half * aspect;
+        let y = (1.0 - 2.0 * (cursor.y - self.rect.top()) / self.rect.height()) * half;
+        let (direction, right, up) = self.camera.basis();
+        if direction.z.abs() < 1e-6 {
+            return None;
+        }
+        let plane = self.camera.target + right * x + up * y;
+        let local_z = z * self.camera.world_scale - self.camera.origin.z;
+        let local = plane + direction * ((local_z - plane.z) / direction.z);
+        let world = (local + self.camera.origin) / self.camera.world_scale;
+        world.is_finite().then_some([world.x, world.y, z])
     }
 
     fn point(&self, point: [f32; 3]) -> Option<(egui::Pos2, f32)> {
@@ -758,6 +812,8 @@ impl Renderer {
             gl.uniform_1_i32(self.kind.as_ref(), 0);
             for layer in layers {
                 if let Some(gpu) = self.layers.get(&layer.id) {
+                    // Scene IDs start at one; zero is the preview-only highlight buffer.
+                    gl.uniform_1_i32(self.kind.as_ref(), if layer.id == 0 { 2 } else { 0 });
                     if let Some((_, ranges)) = selection.filter(|(id, _)| *id == layer.id) {
                         gl.uniform_1_i32(self.clip_enabled.as_ref(), 1);
                         gl.uniform_3_f32(
@@ -895,7 +951,7 @@ void main() {
     vec3 mid = vec3(0.16, 0.83, 0.66);
     vec3 high = vec3(1.0, 0.71, 0.22);
     vec3 elevation = t < 0.5 ? mix(low, mid, t * 2.0) : mix(mid, high, t * 2.0 - 1.0);
-    v_color = u_kind == 1 ? u_tint : mix(elevation, u_tint, 0.12);
+    v_color = u_kind != 0 ? u_tint : mix(elevation, u_tint, 0.12);
 }
 "#;
 
@@ -904,7 +960,7 @@ in vec3 v_color;
 uniform int u_kind;
 out vec4 out_color;
 void main() {
-    if (u_kind == 0) {
+    if (u_kind != 1) {
         vec2 p = gl_PointCoord * 2.0 - 1.0;
         if (dot(p, p) > 1.0) discard;
     }
@@ -1219,5 +1275,27 @@ mod tests {
         assert!(camera.target.is_finite());
         assert!(camera.matrix(1.0).is_finite());
         assert!(camera.grid().iter().flatten().all(|n| n.is_finite()));
+    }
+    #[test]
+    fn polygon_click_unprojects_empty_space_to_world_xy_and_survives_camera_changes() {
+        let mut camera = Camera::fitted([[10., 30.], [-20., 20.], [5., 8.]]).unwrap();
+        camera.yaw = -std::f32::consts::FRAC_PI_2;
+        camera.pitch = std::f32::consts::FRAC_PI_2;
+        let rect = egui::Rect::from_min_size(egui::pos2(200., 50.), egui::vec2(700., 600.));
+        let projection = Projection::new(camera, rect);
+        let cursor = rect.center() + egui::vec2(100., -80.);
+        let picked = projection.on_z_plane(cursor, 5.5).unwrap();
+        let projected = projection.point(picked).unwrap().0;
+        assert!(projected.distance(cursor) < 0.001);
+        let raised = projection.on_z_plane(cursor, 7.5).unwrap();
+        assert!((picked[0] - raised[0]).abs() < 0.0001);
+        assert!((picked[1] - raised[1]).abs() < 0.0001);
+        assert_eq!(picked[2], 5.5);
+        assert!(projection
+            .on_z_plane(rect.min - egui::vec2(1., 1.), 5.5)
+            .is_none());
+        camera.yaw += 0.4;
+        camera.pitch -= 0.4;
+        assert!(Projection::new(camera, rect).point(picked).is_some());
     }
 }

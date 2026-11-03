@@ -17,6 +17,7 @@ pub struct Region {
     /// Unit-normal plane equations in global coordinates, n.x + d <= 1e-6.
     pub planes: Vec<[f64; 4]>,
     halfspaces: Vec<Plane>,
+    polygon: Option<Vec<[f64; 2]>>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -138,7 +139,109 @@ impl Region {
                 })
                 .collect(),
             halfspaces: faces.into_iter().map(|face| face.plane).collect(),
+            polygon: None,
         })
+    }
+
+    /// A simple (possibly concave) XY polygon extruded between explicit world Z limits.
+    pub fn from_polygon(picks: &[[f32; 3]], z: [f32; 2]) -> Result<Self, String> {
+        if picks.len() < 3 {
+            return Err("至少画出 3 个不共线顶点。".into());
+        }
+        if !z.iter().all(|v| v.is_finite()) || z[0] > z[1] {
+            return Err("Z 下限必须小于或等于上限，且均为有限数值。".into());
+        }
+        if picks.iter().any(|p| !p[0].is_finite() || !p[1].is_finite()) {
+            return Err("轮廓包含无效坐标。".into());
+        }
+        let polygon: Vec<_> = picks
+            .iter()
+            .map(|p| [f64::from(p[0]), f64::from(p[1])])
+            .collect();
+        let n = polygon.len();
+        for i in 0..n {
+            for j in i + 1..n {
+                if polygon[i] == polygon[j] {
+                    return Err("轮廓顶点不能重复。".into());
+                }
+            }
+            let a = polygon[(i + n - 1) % n];
+            let b = polygon[i];
+            let c = polygon[(i + 1) % n];
+            if cross2(a, b, c) == 0.0
+                && (a[0] - b[0]) * (c[0] - b[0]) + (a[1] - b[1]) * (c[1] - b[1]) > 0.0
+            {
+                return Err("相邻轮廓边不能重叠折返。".into());
+            }
+            for j in i + 1..n {
+                if j == i + 1 || (i == 0 && j == n - 1) {
+                    continue;
+                }
+                if segments_intersect(
+                    polygon[i],
+                    polygon[(i + 1) % n],
+                    polygon[j],
+                    polygon[(j + 1) % n],
+                ) {
+                    return Err("轮廓不能自交，请撤销顶点后重新绘制。".into());
+                }
+            }
+        }
+        let area: f64 = (1..n - 1)
+            .map(|i| cross2(polygon[0], polygon[i], polygon[i + 1]))
+            .sum();
+        if area == 0.0 {
+            return Err("轮廓面积为零，请选择不共线顶点。".into());
+        }
+        let mut bounds = [[f32::INFINITY, f32::NEG_INFINITY]; 3];
+        for p in picks {
+            for a in 0..2 {
+                bounds[a][0] = bounds[a][0].min(p[a]);
+                bounds[a][1] = bounds[a][1].max(p[a]);
+            }
+        }
+        bounds[2] = z;
+        let vertices = z
+            .into_iter()
+            .flat_map(|height| picks.iter().map(move |p| [p[0], p[1], height]))
+            .collect();
+        Ok(Self {
+            vertices,
+            triangles: Vec::new(),
+            bounds,
+            precise_bounds: bounds.map(|r| r.map(f64::from)),
+            origin: [0.0; 3],
+            planes: Vec::new(),
+            halfspaces: Vec::new(),
+            polygon: Some(polygon),
+        })
+    }
+
+    pub fn edges(&self) -> Vec<[[f32; 3]; 2]> {
+        if let Some(polygon) = &self.polygon {
+            let n = polygon.len();
+            (0..n)
+                .flat_map(|i| {
+                    let j = (i + 1) % n;
+                    [
+                        [self.vertices[i], self.vertices[j]],
+                        [self.vertices[i + n], self.vertices[j + n]],
+                        [self.vertices[i], self.vertices[i + n]],
+                    ]
+                })
+                .collect()
+        } else {
+            self.triangles
+                .iter()
+                .flat_map(|t| {
+                    [
+                        [self.vertices[t[0]], self.vertices[t[1]]],
+                        [self.vertices[t[1]], self.vertices[t[2]]],
+                        [self.vertices[t[2]], self.vertices[t[0]]],
+                    ]
+                })
+                .collect()
+        }
     }
 
     /// Inclusive XYZ limits and hull boundaries, matching points_inside_region.
@@ -152,11 +255,45 @@ impl Region {
         }) {
             return false;
         }
+        if let Some(polygon) = &self.polygon {
+            return inside_polygon([f64::from(point[0]), f64::from(point[1])], polygon);
+        }
         let local = sub(point.map(f64::from), self.origin);
         self.halfspaces
             .iter()
             .all(|plane| plane.distance(local) <= INSIDE_TOLERANCE)
     }
+}
+
+fn cross2(a: [f64; 2], b: [f64; 2], c: [f64; 2]) -> f64 {
+    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+}
+fn on_segment(p: [f64; 2], a: [f64; 2], b: [f64; 2]) -> bool {
+    cross2(a, b, p) == 0.0 && (0..2).all(|k| p[k] >= a[k].min(b[k]) && p[k] <= a[k].max(b[k]))
+}
+fn segments_intersect(a: [f64; 2], b: [f64; 2], c: [f64; 2], d: [f64; 2]) -> bool {
+    let opposite = |x: f64, y: f64| (x > 0.0 && y < 0.0) || (x < 0.0 && y > 0.0);
+    (opposite(cross2(a, b, c), cross2(a, b, d)) && opposite(cross2(c, d, a), cross2(c, d, b)))
+        || on_segment(c, a, b)
+        || on_segment(d, a, b)
+        || on_segment(a, c, d)
+        || on_segment(b, c, d)
+}
+fn inside_polygon(p: [f64; 2], polygon: &[[f64; 2]]) -> bool {
+    let mut inside = false;
+    for i in 0..polygon.len() {
+        let a = polygon[i];
+        let b = polygon[(i + 1) % polygon.len()];
+        if on_segment(p, a, b) {
+            return true;
+        }
+        if (a[1] > p[1]) != (b[1] > p[1])
+            && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]
+        {
+            inside = !inside;
+        }
+    }
+    inside
 }
 
 fn convex_hull(points: &[[f64; 3]], tolerance: f64) -> Result<Vec<Face>, String> {
@@ -422,5 +559,45 @@ mod tests {
         assert_eq!(region.vertices.len(), 4);
         assert!(region.contains([1_000_000.25; 3], ranges));
         assert!(!region.contains([1_000_000.5; 3], ranges));
+    }
+    #[test]
+    fn polygon_keeps_concavity_and_independent_height_with_inclusive_boundaries() {
+        let p = [
+            [0., 0., 99.],
+            [3., 0., 99.],
+            [3., 1., 99.],
+            [1., 1., 99.],
+            [1., 3., 99.],
+            [0., 3., 99.],
+        ];
+        let r = Region::from_polygon(&p, [0.2, 2.0]).unwrap();
+        let ranges = [[-10., 10.]; 3];
+        assert!(r.contains([0.5, 2.0, 1.5], ranges));
+        assert!(!r.contains([2., 2., 1.], ranges));
+        assert!(!r.contains([0.5, 0.5, 0.], ranges));
+        assert!(r.contains([1., 1., 2.], ranges));
+        assert!(r.contains([0., 0., 0.2], ranges));
+        assert!(!r.contains([0.5, 0.5, 2.1], ranges));
+        assert!(!r.contains([0.5, 2., 1.], [[0., 3.], [0., 1.], [0., 3.]]));
+        let reverse: Vec<_> = p.into_iter().rev().collect();
+        assert!(Region::from_polygon(&reverse, [0.2, 2.])
+            .unwrap()
+            .contains([0.5, 2., 1.], ranges));
+        assert_eq!(r.edges().len(), 18);
+    }
+    #[test]
+    fn polygon_rejects_crossing_duplicate_collinear_and_retraced_edges() {
+        for p in [
+            vec![[0., 0., 0.], [2., 2., 0.], [0., 2., 0.], [2., 0., 0.]],
+            vec![[0., 0., 0.], [2., 0., 0.], [1., 0., 0.]],
+            vec![[0., 0., 0.], [2., 0., 0.], [0., 0., 0.]],
+            vec![[0., 0., 0.], [2., 0., 0.], [1., 0., 0.], [1., 1., 0.]],
+        ] {
+            assert!(Region::from_polygon(&p, [0., 1.]).is_err());
+        }
+        let p = [[0., 0., 0.], [1., 0., 0.], [0., 1., 0.]];
+        assert!(Region::from_polygon(&p, [2., 1.]).is_err());
+        assert!(Region::from_polygon(&p, [0., f32::NAN]).is_err());
+        assert!(Region::from_polygon(&p[..2], [0., 1.]).is_err());
     }
 }

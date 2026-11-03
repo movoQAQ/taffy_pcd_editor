@@ -2,7 +2,7 @@
 """Exercise the real Rust GUI on X11 with XTest mouse/key input.
 
 Run with a Python containing PyQt5, Pillow and NumPy, for example:
-  /home/lyu/taffy_pcd_editor/.venv/bin/python -B -E -s tests/ui_smoke.py \
+  python3 -B -E -s tests/ui_smoke.py \
       --pcd /path/to/input.pcd --output-dir /tmp/taffy-rust-ui-check
 
 The application exposes read-only widget rectangles/state only when the
