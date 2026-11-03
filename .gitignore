@@ -8,3 +8,4 @@ core.*
 
 !recovered/source/core.py
 /analysis/code-objects/
+/rust/target/

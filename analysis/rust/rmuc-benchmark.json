@@ -1,0 +1,824 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-11-03T11:01:23.713946+00:00",
+  "input": "/home/lyu/下载/RMUC2027_V1.0.0.pcd",
+  "input_bytes": 24000221,
+  "voxel_size": 0.05,
+  "repeats": 5,
+  "environment": {
+    "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+    "cpu_model": "AMD Ryzen 7 H 255 W/ Radeon 780M",
+    "logical_cpus": 16,
+    "python": "3.10.22 (main, Oct  9 2026, 15:21:30) [Clang 22.1.3 ]",
+    "python_executable": "/home/lyu/taffy_pcd_editor/.venv/bin/python",
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "rust_executable": "/home/lyu/taffy_pcd_editor/rust/target/release/taffy-pcd-core",
+    "rust_executable_bytes": 473064,
+    "thread_environment": {
+      "OPENBLAS_NUM_THREADS": "2",
+      "OMP_NUM_THREADS": "2",
+      "MKL_NUM_THREADS": "2",
+      "NUMEXPR_NUM_THREADS": "2",
+      "VECLIB_MAXIMUM_THREADS": "2"
+    }
+  },
+  "correctness": {
+    "input_points": 1000000,
+    "in_range_points": 795134,
+    "output_points": 635298,
+    "record_bytes": 24,
+    "source_bounds": [
+      [
+        0.0008907318115234375,
+        28.000883102416992
+      ],
+      [
+        1.4781951904296875e-05,
+        16.003145217895508
+      ],
+      [
+        0.0,
+        3.7986819744110107
+      ]
+    ],
+    "filter_bounds": [
+      [
+        5.600889205932617,
+        28.000883102416992
+      ],
+      [
+        1.4781951904296875e-05,
+        16.003145217895508
+      ],
+      [
+        0.0,
+        3.7986819744110107
+      ]
+    ],
+    "reference_index_sum": 310966398842,
+    "reference_xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+    "selected_records_sha256": "568a81a0894cb5501eeae4d622f9271585fc12f9d831f2fd75fd409442bfff19",
+    "output_file_sha256": "b917e6efcd7f53dae8695ee601a269f2ee92ec510f6c838f54aacc9d543b4973",
+    "input_sha256_before": "3d738c081b66c2a9aca02b551125bd6d2d84efc8053164662c3ead8e725eaa17",
+    "input_sha256_after_validation": "3d738c081b66c2a9aca02b551125bd6d2d84efc8053164662c3ead8e725eaa17",
+    "field_schema": {
+      "fields": [
+        "x",
+        "y",
+        "z",
+        "normal_x",
+        "normal_y",
+        "normal_z"
+      ],
+      "sizes": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "types": [
+        "F",
+        "F",
+        "F",
+        "F",
+        "F",
+        "F"
+      ],
+      "counts": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "full_records_byte_equal": true,
+    "xyz_equal": true,
+    "all_extra_fields_preserved": true,
+    "numpy_version": "1.26.4",
+    "input_sha256_after_benchmark": "3d738c081b66c2a9aca02b551125bd6d2d84efc8053164662c3ead8e725eaa17"
+  },
+  "method": {
+    "scope": "binary PCD load + full finite/bounds scan + range-limited voxel first-point selection",
+    "filter_range": "full source bounds with x lower bound moved 20% inward, rounded to float32",
+    "filter_bounds": [
+      [
+        5.600889205932617,
+        28.000883102416992
+      ],
+      [
+        1.4781951904296875e-05,
+        16.003145217895508
+      ],
+      [
+        0.0,
+        3.7986819744110107
+      ]
+    ],
+    "bounds_inclusive": true,
+    "output_order": "out-of-range records in original order, then first in-range point per cell in original order",
+    "processes": "fresh subprocess per sample, sequential, rotating profile order; one warmup per profile",
+    "cache": "warm filesystem page cache; correctness pass reads input before measurements; no cache dropping",
+    "rss": "Linux GNU time %M maximum resident set size in KiB per complete subprocess",
+    "wall": "controller perf_counter including process startup, Python imports, diagnostics, and exit",
+    "stages": "load_scan includes data load, finite validation and full XYZ bounds scan; filter selects; work excludes imports and diagnostics",
+    "loading": "Rust and minimal NumPy read the binary payload; editor uses its actual load_full_xyz (memmap where supported) followed by the same full XYZ scan",
+    "python_editor": "actual recovered load_full_xyz plus original DisplayFilterWorker.run; statistical/radius filters and auto tuning disabled; no QApplication or rendering",
+    "python_numpy": "NumPy only; range mask + floor(float32 XYZ / float32 voxel) + unique(axis=0, return_index=True)",
+    "selection_results": "Rust and minimal NumPy select source-record indices; the actual editor worker materializes the resulting XYZ array",
+    "selection_algorithms": "Rust uses a hash set to retain first-seen cells; NumPy and the current editor use np.unique sorting, so algorithm and buffer design differ as well as language",
+    "diagnostics": "XYZ SHA256 and index checksum run outside stage timers but remain in wall/RSS; editor has no indices, so index_sum is null and XYZ is checked independently",
+    "export": "not timed in repeated samples (write_ms=0); separate untimed Rust export checked byte-for-byte against original complete records"
+  },
+  "limits": [
+    "This is a core prototype comparison, not a Rust GUI, GUI FPS, or full application memory benchmark.",
+    "NumPy and the current editor already execute native C/C++ operations; this is not Rust versus purely interpreted Python.",
+    "Results depend on this machine, build, input, voxel size and filesystem cache; no cold disk or parallel throughput claim.",
+    "Peak RSS includes imports, selection and lightweight diagnostics; only stage timings exclude diagnostics.",
+    "Process wall measurements have unequal diagnostic work: Python profiles also hash output XYZ, while Rust computes only an index sum. Stage timings exclude both.",
+    "Selection output representations and algorithms differ (record indices versus materialized XYZ; hash set versus sorted unique). Results cannot isolate programming language alone.",
+    "Correctness of other editing features, statistical/radius outlier removal and non-binary PCD is outside this benchmark.",
+    "No repeated export speed comparison; the current editor exports XYZ only while this Rust prototype preserves complete records."
+  ],
+  "median": {
+    "rust": {
+      "load_scan_ms": 24.133121,
+      "filter_ms": 144.436698,
+      "write_ms": 0.0,
+      "work_ms": 169.688531,
+      "process_wall_ms": 175.21386500038716,
+      "peak_rss_kib": 43716
+    },
+    "python-editor": {
+      "load_scan_ms": 58.5091719999582,
+      "filter_ms": 574.6698279999691,
+      "write_ms": 0.0,
+      "work_ms": 632.361974000105,
+      "process_wall_ms": 2705.036846999974,
+      "peak_rss_kib": 590760
+    },
+    "python-numpy": {
+      "load_scan_ms": 61.13833199970031,
+      "filter_ms": 563.8867650000066,
+      "write_ms": 0.0,
+      "work_ms": 624.7960870000497,
+      "process_wall_ms": 744.5032919999903,
+      "peak_rss_kib": 123940
+    }
+  },
+  "warmups": [
+    {
+      "engine": "rust",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "load_scan_ms": 23.458434,
+      "filter_ms": 130.824247,
+      "write_ms": 0.0,
+      "work_ms": 154.282711,
+      "index_sum": 310966398842,
+      "bounds": [
+        [
+          0.0008907318,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "filter_bounds": [
+        [
+          5.600889,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "process_wall_ms": 162.63426500017886,
+      "peak_rss_kib": 43636,
+      "profile": "rust",
+      "repeat": 0
+    },
+    {
+      "engine": "python-editor",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 57.745426000110456,
+      "filter_ms": 580.9609510001792,
+      "write_ms": 0.0,
+      "work_ms": 638.7063770002896,
+      "dependencies_import_ms": 1550.1678699997683,
+      "index_sum": null,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 2630.079175999981,
+      "peak_rss_kib": 590472,
+      "profile": "python-editor",
+      "repeat": 0
+    },
+    {
+      "engine": "python-numpy",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 59.10757600031502,
+      "filter_ms": 623.2314869998845,
+      "write_ms": 0.0,
+      "work_ms": 682.3390630001995,
+      "dependencies_import_ms": 48.852774999886606,
+      "index_sum": 310966398842,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 796.1644850001903,
+      "peak_rss_kib": 124096,
+      "profile": "python-numpy",
+      "repeat": 0
+    }
+  ],
+  "samples": [
+    {
+      "engine": "rust",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "load_scan_ms": 23.11112,
+      "filter_ms": 252.087297,
+      "write_ms": 0.0,
+      "work_ms": 275.198447,
+      "index_sum": 310966398842,
+      "bounds": [
+        [
+          0.0008907318,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "filter_bounds": [
+        [
+          5.600889,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "process_wall_ms": 280.5763729998034,
+      "peak_rss_kib": 43716,
+      "profile": "rust",
+      "repeat": 1
+    },
+    {
+      "engine": "python-editor",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 58.25639700015017,
+      "filter_ms": 598.1671849999657,
+      "write_ms": 0.0,
+      "work_ms": 656.4235820001159,
+      "dependencies_import_ms": 1545.6179699999666,
+      "index_sum": null,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 2768.4714360002545,
+      "peak_rss_kib": 590976,
+      "profile": "python-editor",
+      "repeat": 1
+    },
+    {
+      "engine": "python-numpy",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 60.909322000043176,
+      "filter_ms": 563.8867650000066,
+      "write_ms": 0.0,
+      "work_ms": 624.7960870000497,
+      "dependencies_import_ms": 47.57823899990399,
+      "index_sum": 310966398842,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 744.5032919999903,
+      "peak_rss_kib": 123752,
+      "profile": "python-numpy",
+      "repeat": 1
+    },
+    {
+      "engine": "python-editor",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 58.56501700009176,
+      "filter_ms": 569.6185159999914,
+      "write_ms": 0.0,
+      "work_ms": 628.1835330000831,
+      "dependencies_import_ms": 1518.5897880000994,
+      "index_sum": null,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 2653.0375700003788,
+      "peak_rss_kib": 591180,
+      "profile": "python-editor",
+      "repeat": 2
+    },
+    {
+      "engine": "python-numpy",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 60.00511199999892,
+      "filter_ms": 566.9230410003365,
+      "write_ms": 0.0,
+      "work_ms": 626.9281530003354,
+      "dependencies_import_ms": 44.62528999965798,
+      "index_sum": 310966398842,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 754.0032050001173,
+      "peak_rss_kib": 124104,
+      "profile": "python-numpy",
+      "repeat": 2
+    },
+    {
+      "engine": "rust",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "load_scan_ms": 25.251803,
+      "filter_ms": 144.436698,
+      "write_ms": 0.0,
+      "work_ms": 169.688531,
+      "index_sum": 310966398842,
+      "bounds": [
+        [
+          0.0008907318,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "filter_bounds": [
+        [
+          5.600889,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "process_wall_ms": 175.21386500038716,
+      "peak_rss_kib": 43348,
+      "profile": "rust",
+      "repeat": 2
+    },
+    {
+      "engine": "python-numpy",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 62.682673999916005,
+      "filter_ms": 565.8012930002769,
+      "write_ms": 0.0,
+      "work_ms": 628.4839670001929,
+      "dependencies_import_ms": 50.810905000162165,
+      "index_sum": 310966398842,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 754.8361700000896,
+      "peak_rss_kib": 123816,
+      "profile": "python-numpy",
+      "repeat": 3
+    },
+    {
+      "engine": "rust",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "load_scan_ms": 25.914359,
+      "filter_ms": 150.728361,
+      "write_ms": 0.0,
+      "work_ms": 176.642891,
+      "index_sum": 310966398842,
+      "bounds": [
+        [
+          0.0008907318,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "filter_bounds": [
+        [
+          5.600889,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "process_wall_ms": 183.50924400010626,
+      "peak_rss_kib": 43460,
+      "profile": "rust",
+      "repeat": 3
+    },
+    {
+      "engine": "python-editor",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 57.692146000135835,
+      "filter_ms": 574.6698279999691,
+      "write_ms": 0.0,
+      "work_ms": 632.361974000105,
+      "dependencies_import_ms": 1658.4921250000662,
+      "index_sum": null,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 2740.105158999995,
+      "peak_rss_kib": 590416,
+      "profile": "python-editor",
+      "repeat": 3
+    },
+    {
+      "engine": "rust",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "load_scan_ms": 23.890917,
+      "filter_ms": 118.44331,
+      "write_ms": 0.0,
+      "work_ms": 142.334257,
+      "index_sum": 310966398842,
+      "bounds": [
+        [
+          0.0008907318,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "filter_bounds": [
+        [
+          5.600889,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "process_wall_ms": 147.2243759999401,
+      "peak_rss_kib": 43732,
+      "profile": "rust",
+      "repeat": 4
+    },
+    {
+      "engine": "python-editor",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 58.5091719999582,
+      "filter_ms": 558.46927399989,
+      "write_ms": 0.0,
+      "work_ms": 616.9784459998482,
+      "dependencies_import_ms": 1584.1556810000839,
+      "index_sum": null,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 2656.783207999979,
+      "peak_rss_kib": 590760,
+      "profile": "python-editor",
+      "repeat": 4
+    },
+    {
+      "engine": "python-numpy",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 62.003808000099525,
+      "filter_ms": 538.0047069998,
+      "write_ms": 0.0,
+      "work_ms": 600.0085149998995,
+      "dependencies_import_ms": 52.72119500023109,
+      "index_sum": 310966398842,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 715.6539679999696,
+      "peak_rss_kib": 123940,
+      "profile": "python-numpy",
+      "repeat": 4
+    },
+    {
+      "engine": "python-editor",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 60.050437999962014,
+      "filter_ms": 653.1266349998077,
+      "write_ms": 0.0,
+      "work_ms": 713.1770729997697,
+      "dependencies_import_ms": 1556.49577999975,
+      "index_sum": null,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 2705.036846999974,
+      "peak_rss_kib": 589648,
+      "profile": "python-editor",
+      "repeat": 5
+    },
+    {
+      "engine": "python-numpy",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "bounds": [
+        [
+          0.0008907318115234375,
+          28.000883102416992
+        ],
+        [
+          1.4781951904296875e-05,
+          16.003145217895508
+        ],
+        [
+          0.0,
+          3.7986819744110107
+        ]
+      ],
+      "load_scan_ms": 61.13833199970031,
+      "filter_ms": 509.0818550002041,
+      "write_ms": 0.0,
+      "work_ms": 570.2201869999044,
+      "dependencies_import_ms": 51.91163300014523,
+      "index_sum": 310966398842,
+      "xyz_sha256": "bc579e8ec0f219af55b5bc7e5079613628675d6b46812d5849de457c001ada4d",
+      "process_wall_ms": 680.6041220002044,
+      "peak_rss_kib": 124432,
+      "profile": "python-numpy",
+      "repeat": 5
+    },
+    {
+      "engine": "rust",
+      "input_points": 1000000,
+      "in_range_points": 795134,
+      "output_points": 635298,
+      "record_bytes": 24,
+      "load_scan_ms": 24.133121,
+      "filter_ms": 108.13564,
+      "write_ms": 0.0,
+      "work_ms": 132.268882,
+      "index_sum": 310966398842,
+      "bounds": [
+        [
+          0.0008907318,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "filter_bounds": [
+        [
+          5.600889,
+          28.000883
+        ],
+        [
+          1.4781952e-05,
+          16.003145
+        ],
+        [
+          0.0,
+          3.798682
+        ]
+      ],
+      "process_wall_ms": 136.9403600001533,
+      "peak_rss_kib": 43732,
+      "profile": "rust",
+      "repeat": 5
+    }
+  ]
+}

@@ -61,6 +61,42 @@ UI 验证包括导入与后台完整载入、VTK 渲染、范围滑块、网格/
 - 早前出现过一次 RMUC 集成版导入等待超时，状态文字已显示完整载入。后续完整及连续测试均通过；已补充图层/请求/线程诊断，尚未确认根因。窗口清理改进不能视为此问题已修复。
 - 尚未验证长时间运行、全部硬件/高 DPI 配置及更大数据。
 
+## Rust 点云核心原型
+
+`rust/` 是独立的点云处理库和命令行工具，使用 Rust 标准库，无第三方 crate。现有 `start.sh` 仍启动 Python/Qt 编辑器；本轮没有把 GUI、点选、统计/半径滤波或补点迁移到 Rust。
+
+```bash
+cargo build --offline --release --manifest-path rust/Cargo.toml
+rust/target/release/taffy-pcd-core /path/to/map.pcd --voxel 0.05 --output /tmp/filtered.pcd
+# 只对范围内做体素滤波，范围外全部保留：
+rust/target/release/taffy-pcd-core /path/to/map.pcd --voxel 0.05 --bounds -5 5 -10 10 0 3 --output /tmp/filtered-range.pcd
+```
+
+输出文件必须不存在，命令不会覆盖输入或已有输出。支持 binary PCD、任意字段排列和 COUNT，XYZ 必须为单值 F4/F8；坐标按 float32 处理，与当前编辑器一致。每个体素保留输入中的第一个点，按“范围外原序 + 范围内保留点原序”输出；法线、强度等额外字段随整条记录逐字节保留，VIEWPOINT 保留。编辑后 WIDTH/HEIGHT 改为非组织点云布局。ASCII、压缩 PCD、非有限 XYZ、无法表示为 float32 的坐标及越界体素编号会明确报错。
+
+```bash
+cargo test --offline --manifest-path rust/Cargo.toml
+cargo clippy --offline --manifest-path rust/Cargo.toml --all-targets -- -D warnings
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -B -E -s -m pytest -q -p no:cacheprovider tests/test_rust_core.py
+.venv/bin/python -B -E -s tools/benchmark-rust.py /path/to/map.pcd --repeats 5 --output /tmp/taffy-rust-benchmark.json
+```
+
+基准分别启动 Rust、现有编辑器后台处理、仅 NumPy 三种独立进程；每种预热一次，再顺序轮换测量五次，报告中位数和全部原始样本。读取计时包含完整 XYZ 的有限性检查与边界扫描，避免把 Python 内存映射的延迟读入漏计。计算阶段和包含依赖导入的进程总耗时分开记录，峰值 RSS 用 GNU time 采集；正确性比较在计时外完成，并检查原文件 SHA-256 未改变。
+
+这是热文件缓存、单一百万点地图的 CPU 核心测试，不是完整 GUI 的内存或帧率测试。体素部分还包含从 NumPy 排序去重换为 Rust 哈希表首点选择的算法变化，结果不能归因于语言本身。原型可执行文件仅含核心逻辑，不能拿其大小当作完整编辑器的体积。
+
+2026-11-03，在本机 Ryzen 7 H 255 上使用 RMUC 百万点地图，5 cm 体素、X 范围下界移至全长 20%，五轮中位数如下：
+
+| 实现 | 读取并扫描 | 范围内体素筛选 | 两阶段合计 | 整进程峰值 RSS |
+| --- | ---: | ---: | ---: | ---: |
+| Rust 核心 | 24.1 ms | 144.4 ms | 169.7 ms | 42.7 MiB |
+| 现有编辑器后台计算 | 58.5 ms | 574.7 ms | 632.4 ms | 576.9 MiB |
+| 仅 NumPy 对照 | 61.1 ms | 563.9 ms | 624.8 ms | 121.0 MiB |
+
+Rust 筛选单次耗时范围为 108.1–252.1 ms，存在波动；没有选择性剔除样本。峰值 RSS 包含依赖导入、处理和轻量校验，Python 后台进程加载了 Qt/VTK/Open3D，Rust 与 NumPy 输出索引而编辑器后台还会物化 XYZ 数组。
+
+本次范围内有 795,134 点，输出 635,298 点。与独立 NumPy 参考逐完整记录相同，现有后台流程的 XYZ 摘要也相同，原始 RMUC SHA-256 未变。使用的是固定数值范围，与早前 UI 点击测试范围不同。release 可执行文件为 473,064 字节（约 462 KiB），仍依赖系统 libc/libgcc，不包含 GUI。原始测量与方法见 [RMUC 基准 JSON](analysis/rust/rmuc-benchmark.json)。
+
 ## 来源与校验
 
 原始 deb SHA-256：`939b5d0fee7f89ebefe750ace0310acdf54b89704c18332c941ff80ed352b14b`。
