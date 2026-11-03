@@ -1,106 +1,68 @@
-# Taffy PCD 编辑器：源码恢复与本机运行
+# Taffy PCD Editor · Rust
 
-基于 [taffy-editor v1.2 发布包](https://github.com/LYJX-robotic-CC/taffy-editor/releases/tag/v1.2) 恢复。当前已恢复 9 个核心函数和 2 个 Qt 滑块类，并完成本机 Qt/VTK UI 验证。主窗口和后台线程仍使用原始 Python 3.10 字节码，尚不能仅凭恢复源码运行。
+原生 Rust 点云编辑器，采用 egui / eframe + OpenGL。仓库主版本已从 Python 字节码恢复工程迁移到 Rust；运行 GUI 无需 Python、ROS、Docker 或 deb。原版图标、粉色主题、猫耳底纹和左右工具栏布局已复用，素材来源见 [assets/ORIGINAL-GUI.md](assets/ORIGINAL-GUI.md)。
 
-## 统一启动
-
-```bash
-./start.sh              # 默认启动恢复代码集成版
-./start.sh --original   # 原始 release 对照版
-./start.sh --help
-```
-
-也可以从任意目录执行 `/path/to/taffy_pcd_editor/start.sh`。脚本会定位项目目录，首次缺少 `.venv` 时自动执行 `tools/setup-local.sh` 安装本机依赖；已有环境可直接启动。需要联网安装时正常下载，不使用 Docker，也不需要安装 deb。
-
-需要 Linux 图形桌面及 X11 `DISPLAY`。默认软件渲染，可用 `LIBGL_ALWAYS_SOFTWARE=0 ./start.sh` 尝试硬件渲染。安装和运行不修改系统 Python 或 ROS：独立 Python 3.10 由 uv 管理，项目依赖位于 `.venv`；没有系统 uv 时，在 `.bootstrap` 安装备用 uv。
-
-本机验证环境：Ubuntu 24.04、Python 3.10.22、PyQt5 5.15.11、VTK 9.3.1、Open3D 0.19.0。依赖固定在 `tools/requirements-runtime.txt`。`.venv` 约 2.2 GB，`.bootstrap` 约 53 MB，均不提交到 Git。需要重新安装依赖时执行 `./tools/setup-local.sh`。
-
-启动使用 `python -E -s`，忽略外部 `PYTHONPATH` 和用户包；测试额外关闭第三方 pytest 插件自动加载，避免当前 ROS Jazzy 的 Python 3.12 包干扰 Python 3.10。这些设置只作用于本次子进程。
-
-## 项目目录
-
-| 路径 | 用途 |
-| --- | --- |
-| `start.sh` | 唯一应用启动脚本 |
-| `recovered/source/` | 已恢复、经对照测试的核心函数和 Qt 控件 |
-| `original/main.pyc`、`original/assets/` | 目前必需的原始主窗口、后台线程及图标 |
-| `original/UPSTREAM-README.md` | 上游说明和权利归属 |
-| `tools/` | 本机安装、集成加载、测试和源码恢复工具 |
-| `tests/` | 原版对照、控件和真实桌面工作流测试 |
-| `analysis/`、`recovered/depyf/` | 保留的反汇编、对象索引、待审查反编译文本和 UI 证据 |
-
-旧 `docker/`、Docker 构建/恢复脚本、deb 安装布局、重复图标、失败的整文件反编译及可重新生成的逐对象字节码/旧碎片已经清理。原始运行文件已移到 `original/`，不再保留 `rootfs/` 下的系统安装目录层级。旧材料仍可从 Git 历史取回。
-
-`recovered/depyf/` 是分析材料，不能直接当作可运行源码；完整反汇编和已核对的函数反汇编继续保留，便于恢复剩余主窗口。具体索引见 `analysis/INDEX.md`。
-
-## 测试
+## 启动
 
 ```bash
-./tools/test-runtime.sh
-TAFFY_TEST_PCD=/path/to/map.pcd ./tools/test-runtime.sh
-# 将新截图/报告写到仓库外：
-TAFFY_TEST_PCD=/path/to/map.pcd TAFFY_UI_ARTIFACT_DIR=/tmp/taffy-ui ./tools/test-runtime.sh
+./start.sh
+# 启动时载入点云，可传入多个文件：
+./start.sh /path/to/map.pcd
 ```
 
-测试入口运行 44 项核心/控件测试和 2 项示例 UI 工作流；设置 `TAFFY_TEST_PCD` 后增加原版、恢复版各 1 项真实点云工作流，共 48 项。UI 测试需要桌面显示。导出文件写入 pytest 临时目录，原始点云只读并检查 SHA-256。
+`start.sh` 可从任意目录执行；已有根目录二进制时直接打开 GUI，首次缺少二进制时调用 `build.sh`。源码更新后运行 `./build.sh`，生成可直接执行的 `./taffy-pcd-editor`。编译产物不提交到 Git。
 
-2026-11-03 已通过完整 48 项测试；随后三轮 RMUC 工作流共 6 项也通过。清理目录后再次运行完整入口，48 项全部通过；从项目外调用 `start.sh` 的原版和恢复版均通过 7 秒启动存活检查。测试窗口退出现在等待全部后台线程结束并释放 Qt 对象，覆盖原先 `_editing_busy()` 不等待可见点数统计线程的清理缺口。
+本机独立工作空间：`/home/lyu/taffy_pcd_editor_rust`；原仓库目录 `/home/lyu/taffy_pcd_editor` 同样替换为 Rust 版。`taffy-pcd-editor.code-workspace` 可供代码编辑器打开，`Taffy-Rust.desktop` 是指向本机独立工作空间的快捷方式；移动目录时需调整其中 Exec、Icon 和 Path。
 
-真实数据为 `RMUC2027_V1.0.0.pcd`，1,000,000 点，含 XYZ 和法线。两版均渲染全部百万点；范围内 5 cm 体素滤波后总点数均为 636,669，范围外点保持不变。区域删除 292 点、补全 999 点，导出并回读 1,000,707 点。原始文件 SHA-256 始终为 `3d738c081b66c2a9aca02b551125bd6d2d84efc8053164662c3ead8e725eaa17`。
+## 区域点云删除
 
-UI 验证包括导入与后台完整载入、VTK 渲染、范围滑块、网格/投影/俯视、图层显隐、滤波及筛空保护、视口双击选点、凸包、删除、补全、导出回读和退出。文件对话框使用测试路径；区域编辑使用确定顶点，按钮和后台线程实际执行。截图和报告见 `analysis/ui/`。单次测试时间不代表帧率或长期性能保证。
+1. 导入并选中可见图层，在右侧点击 **开始选点区域**。
+2. 在点云上**双击**选择至少 4 个不同边界点；左键拖动可旋转视角，右键拖动平移，滚轮缩放。支持撤销最后一个选点、清空选点以及 Esc 清空选区。
+3. 设置 **XYZ 外扩 / 厘米**，点击 **计算凸包区域**，查看编号选点、凸包边线和命中点数。
+4. 点击 **删除区域点**。结果成为新的编辑图层，原图层隐藏并保留，可重新显示对照。
+5. 选中结果图层，点击 **导出选中图层**，写入一个新的 PCD 文件。
 
-## 恢复范围与限制
+几何语义沿用原版：对每个边界点加入 XYZ 各方向的八角偏移，再计算三维凸包。外扩为 0 时不能全部共面；正外扩可使平面上的选点形成体积。删除范围是凸包与当前 **XYZ 作用范围** 的交集，区域外点保持原序。完全覆盖图层时会拒绝删除，至少保留一个点。
 
-- `core.py`：`fmt_number`、`make_demo_cloud`、`load_pcd_data`、`load_full_xyz`、`range_mask`、`available_memory_bytes`、`complete_region`、`points_inside_region`、`write_full_pcd`。
-- `widgets.py`：`HeightRangeSlider`、`DragOnlySlider`。源码自身没有字节码加载或回退，集成关系位于 `tools/run_editor.py`。
-- 编辑导出延续 release 行为，仅写 XYZ，不保留法线或其他字段；原文件复制路径保留全部字节。
-- 默认半径滤波参数（5 cm 内至少 20 点）可能筛空稀疏点云，程序提示并保留输入，参数应匹配点密度。
-- 原始主窗口底部高度文字仍可能显示初始范围，与实际范围滑块不一致，尚未修复。
-- 早前出现过一次 RMUC 集成版导入等待超时，状态文字已显示完整载入。后续完整及连续测试均通过；已补充图层/请求/线程诊断，尚未确认根因。窗口清理改进不能视为此问题已修复。
-- 尚未验证长时间运行、全部硬件/高 DPI 配置及更大数据。
+范围、外扩或选点改变后需要重新计算；切换、隐藏或移除目标图层会清除旧选区。后台任务检查来源图层和预览版本，迟到结果不会恢复已删除图层。法线、强度及其他字段随剩余原始记录逐字节保留，不重新估算法线。
 
-## Rust 点云核心原型
+## 其他操作
 
-`rust/` 是独立的点云处理库和命令行工具，使用 Rust 标准库，无第三方 crate。现有 `start.sh` 仍启动 Python/Qt 编辑器；本轮没有把 GUI、点选、统计/半径滤波或补点迁移到 Rust。
+- 导入支持粘贴路径、原生文件选择器和拖入文件。
+- 图层复选框控制显隐；行尾 ×、「删除选中图层」或 Delete 移除整个场景图层，不删除磁盘 PCD。
+- F /「适配视图」显示全部可见图层；「俯视」切换顶视角。
+- 体素滤波在 XYZ 范围内每个体素保留第一个点，范围外全部保留；结果成为新图层。连续滤波和区域删除只处理当前图层剩余的点。
+- 导出保留所有选中点的原始字段、COUNT 和 VIEWPOINT，输出 HEIGHT=1 的非组织点云；不会覆盖已有文件或源文件。
+
+读取、凸包计数、删除、滤波与导出在后台运行。已启动的导出完成其快照；关闭窗口时等待已启动的数据任务结束。
+
+## 构建与测试
+
+本机已配置 Rust stable 和 Linux 图形依赖。运行需图形桌面、OpenGL 3.3，以及 Noto Sans CJK 或 Droid Sans Fallback 中文字体。
 
 ```bash
-cargo build --offline --release --manifest-path rust/Cargo.toml
-rust/target/release/taffy-pcd-core /path/to/map.pcd --voxel 0.05 --output /tmp/filtered.pcd
-# 只对范围内做体素滤波，范围外全部保留：
-rust/target/release/taffy-pcd-core /path/to/map.pcd --voxel 0.05 --bounds -5 5 -10 10 0 3 --output /tmp/filtered-range.pcd
+./build.sh
+cargo test --locked --workspace
+cargo clippy --locked --workspace --all-targets -- -D warnings
+cargo fmt --all -- --check
 ```
 
-输出文件必须不存在，命令不会覆盖输入或已有输出。支持 binary PCD、任意字段排列和 COUNT，XYZ 必须为单值 F4/F8；坐标按 float32 处理，与当前编辑器一致。每个体素保留输入中的第一个点，按“范围外原序 + 范围内保留点原序”输出；法线、强度等额外字段随整条记录逐字节保留，VIEWPOINT 保留。编辑后 WIDTH/HEIGHT 改为非组织点云布局。ASCII、压缩 PCD、非有限 XYZ、无法表示为 float32 的坐标及越界体素编号会明确报错。
+首次构建联网下载 crates；`Cargo.lock` 固定依赖，之后可加 `--offline`。其他 Linux 机器如缺编译依赖，可安装 `build-essential pkg-config libx11-dev libxkbcommon-dev libwayland-dev libgl1-mesa-dev fonts-noto-cjk`。
+
+独立验证脚本使用 Python，仅作为开发测试工具，不参与 GUI 运行。测试环境需要 NumPy、SciPy；桌面回归另需 PyQt5、Pillow 和 X11/XTest：
 
 ```bash
-cargo test --offline --manifest-path rust/Cargo.toml
-cargo clippy --offline --manifest-path rust/Cargo.toml --all-targets -- -D warnings
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -B -E -s -m pytest -q -p no:cacheprovider tests/test_rust_core.py
-.venv/bin/python -B -E -s tools/benchmark-rust.py /path/to/map.pcd --repeats 5 --output /tmp/taffy-rust-benchmark.json
+python3 -B -E -s tests/region_differential.py
+python3 -B -E -s tests/ui_region.py --pcd /path/to/map.pcd --output-dir /tmp/taffy-region-ui
+python3 -B -E -s tests/ui_smoke.py --pcd /path/to/map.pcd --output-dir /tmp/taffy-smoke-ui
 ```
 
-基准分别启动 Rust、现有编辑器后台处理、仅 NumPy 三种独立进程；每种预热一次，再顺序轮换测量五次，报告中位数和全部原始样本。读取计时包含完整 XYZ 的有限性检查与边界扫描，避免把 Python 内存映射的延迟读入漏计。计算阶段和包含依赖导入的进程总耗时分开记录，峰值 RSS 用 GNU time 采集；正确性比较在计时外完成，并检查原文件 SHA-256 未改变。
+`TAFFY_UI_STATE` 仅在测试时启用只读状态和控件坐标；测试通过真实鼠标键盘完成操作，SciPy 独立计算凸包删除结果，NumPy 独立计算体素滤波结果，并核对导出的全部记录和源文件哈希。测试结果与地图不提交到 Git。
 
-这是热文件缓存、单一百万点地图的 CPU 核心测试，不是完整 GUI 的内存或帧率测试。体素部分还包含从 NumPy 排序去重换为 Rust 哈希表首点选择的算法变化，结果不能归因于语言本身。原型可执行文件仅含核心逻辑，不能拿其大小当作完整编辑器的体积。
+本机验证（2026-11-03）：45 项 Rust 测试、Clippy 与格式检查通过；240 组凸包案例、466,033 次点包含判断与 SciPy 一致。使用 `RMUC2027_V1.0.0.pcd` 的 100 万点地图完成真实 GUI 选区删除：删除 112,724 点，剩余 887,276 点，导出包含 `normal_x/y/z` 的所有原始记录与独立参考逐字节一致，源文件哈希不变。
 
-2026-11-03，在本机 Ryzen 7 H 255 上使用 RMUC 百万点地图，5 cm 体素、X 范围下界移至全长 20%，五轮中位数如下：
+## 支持范围与历史
 
-| 实现 | 读取并扫描 | 范围内体素筛选 | 两阶段合计 | 整进程峰值 RSS |
-| --- | ---: | ---: | ---: | ---: |
-| Rust 核心 | 24.1 ms | 144.4 ms | 169.7 ms | 42.7 MiB |
-| 现有编辑器后台计算 | 58.5 ms | 574.7 ms | 632.4 ms | 576.9 MiB |
-| 仅 NumPy 对照 | 61.1 ms | 563.9 ms | 624.8 ms | 121.0 MiB |
+支持 `DATA binary` PCD；XYZ 为单值 F4/F8，编辑坐标按 float32 计算。ASCII、binary_compressed、非有限或不能表示为 float32 的 XYZ 会明确报错。区域补点、统计离群点和半径滤波尚未迁移。
 
-Rust 筛选单次耗时范围为 108.1–252.1 ms，存在波动；没有选择性剔除样本。峰值 RSS 包含依赖导入、处理和轻量校验，Python 后台进程加载了 Qt/VTK/Open3D，Rust 与 NumPy 输出索引而编辑器后台还会物化 XYZ 数组。
-
-本次范围内有 795,134 点，输出 635,298 点。与独立 NumPy 参考逐完整记录相同，现有后台流程的 XYZ 摘要也相同，原始 RMUC SHA-256 未变。使用的是固定数值范围，与早前 UI 点击测试范围不同。release 可执行文件为 473,064 字节（约 462 KiB），仍依赖系统 libc/libgcc，不包含 GUI。原始测量与方法见 [RMUC 基准 JSON](analysis/rust/rmuc-benchmark.json)。
-
-## 来源与校验
-
-原始 deb SHA-256：`939b5d0fee7f89ebefe750ace0310acdf54b89704c18332c941ff80ed352b14b`。
-
-`original/main.pyc` SHA-256：`f41ae9fda78b95f1a2e4cd4a835c5c3b19ccef331916478f805aa901cf1314a9`，清理目录没有改变其字节。
-
-原包及恢复结果保留上游权利归属；本仓库不是上游原始源码，未为上游内容添加新的开源授权。
+Python 源码恢复版保留在 Git 历史提交 [`7931863`](https://github.com/movoQAQ/taffy_pcd_editor/tree/7931863d52f222c5ef7bb191f576426a473d0297)，当前目录不需要原版字节码、虚拟环境或 Python 运行模块。Rust 核心最初由该提交中的 `rust/` 独立原型迁入。上游素材来自 [taffy-editor v1.2](https://github.com/LYJX-robotic-CC/taffy-editor/releases/tag/v1.2)，原有说明见 `assets/UPSTREAM-README.md`；本仓库没有为原素材重新声明许可。

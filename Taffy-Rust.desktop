@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Taffy PCD Editor (Rust)
+Name[zh_CN]=Taffy 点云编辑器 (Rust)
+Comment=Native Rust PCD editor
+Exec=/home/lyu/taffy_pcd_editor_rust/taffy-pcd-editor %F
+Icon=/home/lyu/taffy_pcd_editor_rust/assets/icon.png
+Path=/home/lyu/taffy_pcd_editor_rust
+Terminal=false
+Categories=Graphics;Science;
+StartupNotify=true
